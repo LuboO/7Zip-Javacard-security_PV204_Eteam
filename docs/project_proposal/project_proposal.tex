@@ -1,0 +1,105 @@
+\documentclass[letterpaper]{article}
+
+\usepackage[english]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{url}
+\usepackage{graphicx}
+\usepackage[colorinlistoftodos]{todonotes}
+\usepackage[margin=0.9in]{geometry}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{qtree}
+\pagestyle{fancy}
+\rhead{\textbf{E Team}}
+\lhead{\textit{7-Zip@JavaCard}}
+
+\title{PV204: 7-Zip JavaCard security}
+\author{\textbf{E Team} \\ \textit{Agusti Bau[454255] , Aobakwe Mmokwa[448382] , Lubo Obratil[410282]}}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+7-Zip is open-source project (\url{http://www.7-zip.org/}) distributed under GNU LGPL, 
+that allows user to compress and decompress files and optionally protect them with password. In
+normal work-flow, if user wishes to work with password protected file, he enters plain 
+password into application and given file is then processed. This approach can be exploited in
+various ways.
+
+\subsubsection*{Possible exploits}
+\begin{itemize}
+\item Users don't use secure passwords very often $\Rightarrow$ 6-7 character passwords can be brute-forced.
+\item User's computer may be infected with keylogger $\Rightarrow$ attacker can obtain plain password.
+\item Password is directly used by application $\Rightarrow$ can be retrieved from memory dump.
+\end{itemize}
+
+\section{Proposed approach}
+Our goal would be to implement JavaCard applet which would serve as a password provider for
+7-Zip application. Applet would be capable of persistent storage of master key, derivation of
+encryption and decryption keys to be used by 7-Zip and establishing of secure channel between
+token and application.
+
+\subsubsection*{Application work-flow}
+\begin{enumerate}
+\item User chooses file he wishes to compress and encrypt or decrypt.
+\item 7-Zip establishes secure channel with JavaCard token.
+\item User provides his PIN that is then checked against PIN stored in token.
+\item 7-Zip will encrypt or decrypt file.
+	\begin{enumerate}
+	\item \textbf{Encryption}
+		\begin{enumerate}
+		\item 7-Zip will request encryption key.
+		\item Token will increment its inner counter and based on this counter 
+		and master key will derive encryption key.
+		\item Token will export the encryption key into application.
+		\item 7Zip will request token's current counter and save it into 
+		unencrypted part of archive's metadata.
+		\item File is compressed and encrypted by 7-Zip.
+		\end{enumerate}
+	\item \textbf{Decryption}
+		\begin{enumerate}
+		\item 7-Zip will retrieve counter from archive's metadata.
+		\item 7-Zip will send counter to token.
+		\item Based on received counter and master key, token will derive decryption key.
+		\item Decryption key is used for archive decryption by 7-Zip.
+		\item Archive is decompressed.
+		\end{enumerate}
+	\end{enumerate}
+\item Operation is finished, connection to token is closed.
+\end{enumerate}
+
+\subsubsection*{Increased security of proposed approach}
+\begin{itemize}
+\item Token uses secure channel $\Rightarrow$ prevented eavesdropping on 
+channel between token and application.
+\item Only PIN is entered by user $\Rightarrow$ prevents key retrieval using key-logger,
+since PIN alone is useless without token.
+\item Each new archive is protected by different key $\Rightarrow$ key extracted from
+memory can be used on only one file.
+\item Password created by token $\Rightarrow$ prevents brute-force and dictionary attacks,
+generated password can fully utilize AES256 encryption which is used by 7-Zip.
+\item User or admin PIN is needed to use token $\Rightarrow$ attacker can't just steal token.
+\end{itemize}
+
+\subsubsection*{Scenarios this approach won't prevent}
+\begin{itemize}
+\item Attacker will steal token with PIN written on it.
+\item Attacker will steal token and will pay rogue admin to set user PIN to \texttt{0000}.
+\item Attacker will steal token and will torture user until he or she tells him the PIN.
+\end{itemize}
+
+\subsubsection*{Additional specification of JavaCard token}
+\begin{itemize}
+\item Master key can be generated and erased on the token, but can't be extracted by anyone.
+\item All key operations are available only after successful user PIN verification.
+\item Device is blocked after 3 unsuccessful user PIN tries. It can be unlocked by admin PIN.
+\item User PIN can be set by user or admin.
+\item Admin PIN can be set only by admin.
+\item Admin PIN is 256 bit long key which can not be brute-forced, therefore device can't
+be blocked by admin PIN tries.
+\end{itemize}
+\end{document}
