@@ -5,8 +5,6 @@
  */
 package apdutest;
 
-import applet.Applet7Zip;
-
 /**
  *
  * @author User Lubo
@@ -23,14 +21,9 @@ public class APDUTester {
     
     public static void main(String[] args) {
         try {
-            manager.startSimulator(APPLET_AID, INSTALL_DATA, Applet7Zip.class);
-            
-            byte[] test = {0x13 , 0x01 , 0x00 , 0x00 , 0x00};
-            
-            manager.transmitAPDU(test);
             
         } catch (Exception ex) {
-            System.out.println(ex);
+            System.out.println(ex.toString());
         }
     }
     

@@ -65,19 +65,20 @@ for example Winscard.dll by Microsoft.
     
     2.4 To run simulator execute this command:
     
-        java -cp AppletTester.jar;jcardsim-2.2.2-all.jar com.licel.jcardsim.utils.APDUScriptTool 7zipapplet.cfg saysomething.apdu
+        java -cp AppletTester.jar;jcardsim-2.2.2-all.jar com.licel.jcardsim.utils.APDUScriptTool 7zipapplet.cfg keyderivationdemo.apdu
         
     2.5 Command will send packets from saysomething.apdu to applet configured in 
     file 7zipapplet.cfg. For more info about this read 
     https://jcardsim.org/docs/quick-start-guide-using-in-cli-mode
     
-    Expected output should be this:
+    Expected output is this (last response is randomly generated key, it can differ on your machine):
     
     CLA: 80, INS: b8, P1: 00, P2: 00, Lc: 11, 0a, 37, 5a, 69, 70, 41, 70, 70, 6c, 65, 74, 05, 00, 00, 02, 0f, 0f, Le: 0a, 37, 5a, 69, 70, 41, 70, 70, 6c, 65, 74, SW1: 90, SW2: 00
     CLA: 00, INS: a4, P1: 00, P2: 00, Lc: 0a, 37, 5a, 69, 70, 41, 70, 70, 6c, 65, 74, Le: 00, SW1: 90, SW2: 00
-    CLA: 13, INS: 01, P1: 00, P2: 00, Lc: 00, Le: 3b, 48, 69, 2c, 20, 49, 20, 61, 6d, 20, 37, 2d, 5a, 69, 70, 20, 61, 70, 70, 6c, 65, 74, 2c, 20, 66, 65, 65, 6c, 20, 66, 72, 65, 65, 20, 74, 6f, 20, 74, 65, 73, 74, 20, 79, 6f, 75, 72, 20, 73, 6b, 69, 6c, 6c, 73, 20, 6f, 6e, 20, 6d, 65, 2e, SW1: 90, SW2: 00
+    CLA: 13, INS: 70, P1: 00, P2: 00, Lc: 04, 00, 00, 00, 00, Le: 00, SW1: 90, SW2: 00
+    CLA: 13, INS: 76, P1: 00, P2: 00, Lc: 00, Le: 20, 65, 32, a0, 6e, d6, c9, 58, 3a, 09, de, ac, 55, 96, 45, 5c, 62, 8b, d4, b8, 2e, bf, 7b, ed, 1b, f0, 99, 9f, cd, da, 64, 4c, b9, SW1: 90, SW2: 00
     
-    Comments on apdu packets are in file saysomething.apdu
+    Comments on apdu packets are in file keyderivationdemo.apdu
     
     2.6 Now that you have correct configuraiton of driver and simulator, 
     you can run it together to simulate real card in your system.
