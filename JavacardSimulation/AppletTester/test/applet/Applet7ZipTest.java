@@ -31,6 +31,21 @@ public class Applet7ZipTest {
         (byte) 0x70, (byte) 0x70, (byte) 0x6c, (byte) 0x65, (byte) 0x74
     };
     
+    private final static byte[] VALID_USER_LOGIN = {
+        Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_USER , 0x00 , 0x00 ,
+        0x04 , 0x30 , 0x30 , 0x30 , 0x30
+    };
+    
+    private final static byte[] VALID_ADMIN_LOGIN = {
+        Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_ADMIN , 0x00 , 0x00 ,
+        0x10 , 
+        0x30 , 0x30 , 0x30 , 0x30 , 
+        0x30 , 0x30 , 0x30 , 0x30 , 
+        0x30 , 0x30 , 0x30 , 0x30 , 
+        0x30 , 0x30 , 0x30 , 0x30
+    };
+    
+    
     @Before
     public void setUp() {
         manager = new SimulatorManager();
@@ -77,12 +92,7 @@ public class Applet7ZipTest {
     
     @Test
     public void loginUserGoodPin() throws Exception  {
-        byte[] buffer = 
-        {
-            Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_USER , 0x00 , 0x00 ,
-            0x04 , 0x00 , 0x00 , 0x00 , 0x00
-        };
-        byte[] recv = manager.transmitAPDU(buffer);
+        byte[] recv = manager.transmitAPDU(VALID_USER_LOGIN);
         assertTrue(cmpResponseCode(recv, ISO7816.SW_NO_ERROR));
     }
     
@@ -93,15 +103,10 @@ public class Applet7ZipTest {
             Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_USER , 0x00 , 0x00 ,
             0x04 , 0x01 , 0x01 , 0x01 , 0x01
         };
-        byte[] goodPin = 
-        {
-            Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_USER , 0x00 , 0x00 ,
-            0x04 , 0x00 , 0x00 , 0x00 , 0x00
-        };
         for(int i = 0 ; i < Applet7Zip.PIN_USER_MAX_TRIES ;  ++i) {
             manager.transmitAPDU(badPin);            
         }
-        byte[] recv = manager.transmitAPDU(goodPin);
+        byte[] recv = manager.transmitAPDU(VALID_USER_LOGIN);
         assertTrue(cmpResponseCode(recv, Applet7Zip.SW_VERIFICATION_FAILED));
     }
     
@@ -112,15 +117,10 @@ public class Applet7ZipTest {
             Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_USER , 0x00 , 0x00 ,
             0x04 , 0x01 , 0x01 , 0x01 , 0x01
         };
-        byte[] goodPin = 
-        {
-            Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_USER , 0x00 , 0x00 ,
-            0x04 , 0x00 , 0x00 , 0x00 , 0x00
-        };
         for(int i = 0 ; i < Applet7Zip.PIN_USER_MAX_TRIES - 1 ;  ++i) {
             manager.transmitAPDU(badPin);            
         }
-        byte[] recv = manager.transmitAPDU(goodPin);
+        byte[] recv = manager.transmitAPDU(VALID_USER_LOGIN);
         assertTrue(cmpResponseCode(recv, ISO7816.SW_NO_ERROR));
     }
     
@@ -137,11 +137,6 @@ public class Applet7ZipTest {
     
     @Test
     public void setPinUserUserLogin() throws Exception  {
-        byte[] oldPin = 
-        {
-            Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_USER , 0x00 , 0x00 ,
-            0x04 , 0x00 , 0x00 , 0x00 , 0x00
-        };
         byte[] newPin = 
         {
             Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_SET_PIN_USER , 0x00 , 0x00 ,
@@ -154,7 +149,7 @@ public class Applet7ZipTest {
         };
         byte[] recv;
         /* Login */
-        recv = manager.transmitAPDU(oldPin);
+        recv = manager.transmitAPDU(VALID_USER_LOGIN);
         assertTrue(cmpResponseCode(recv, ISO7816.SW_NO_ERROR));
         /* Change pin */
         recv = manager.transmitAPDU(newPin);
@@ -170,22 +165,13 @@ public class Applet7ZipTest {
     
     @Test
     public void setPinUserAdminLogin() throws Exception  {
-        byte[] adminPin = 
-        {
-            Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_ADMIN , 0x00 , 0x00 ,
-            0x10 , 
-            0x00 , 0x00 , 0x00 , 0x00 , 
-            0x00 , 0x00 , 0x00 , 0x00 , 
-            0x00 , 0x00 , 0x00 , 0x00 , 
-            0x00 , 0x00 , 0x00 , 0x00
-        };
         byte[] newPin = 
         {
             Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_SET_PIN_USER , 0x00 , 0x00 , 
             0x04 , 0x00 , 0x00 , 0x01 , 0x01
         };
         byte[] recv;
-        recv = manager.transmitAPDU(adminPin);
+        recv = manager.transmitAPDU(VALID_ADMIN_LOGIN);
         assertTrue(cmpResponseCode(recv, ISO7816.SW_NO_ERROR));
         recv = manager.transmitAPDU(newPin);
         assertTrue(cmpResponseCode(recv, ISO7816.SW_NO_ERROR));
@@ -196,11 +182,6 @@ public class Applet7ZipTest {
     
     @Test
     public void setUserPinBadLength() throws Exception  {
-        byte[] validPin = 
-        {
-            Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_USER , 0x00 , 0x00 ,
-            0x04 , 0x00 , 0x00 , 0x00 , 0x00
-        };
         byte[] shortPin = 
         {
             Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_SET_PIN_USER , 0x00 , 0x00 ,
@@ -217,7 +198,7 @@ public class Applet7ZipTest {
             0x00
         };
         byte[] recv;
-        recv = manager.transmitAPDU(validPin);
+        recv = manager.transmitAPDU(VALID_USER_LOGIN);
         assertTrue(cmpResponseCode(recv, ISO7816.SW_NO_ERROR));
         recv = manager.transmitAPDU(shortPin);
         assertTrue(cmpResponseCode(recv, ISO7816.SW_DATA_INVALID));
@@ -242,16 +223,7 @@ public class Applet7ZipTest {
     
     @Test
     public void loginAdminGoodPin() throws Exception  {
-        byte[] goodPin = 
-        {
-            Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_ADMIN , 0x00 , 0x00 ,
-            0x10 , 
-            0x00 , 0x00 , 0x00 , 0x00 , 
-            0x00 , 0x00 , 0x00 , 0x00 , 
-            0x00 , 0x00 , 0x00 , 0x00 , 
-            0x00 , 0x00 , 0x00 , 0x00
-        };
-        byte[] recv = manager.transmitAPDU(goodPin);
+        byte[] recv = manager.transmitAPDU(VALID_ADMIN_LOGIN);
         assertTrue(cmpResponseCode(recv, ISO7816.SW_NO_ERROR));
     }
     
@@ -266,19 +238,10 @@ public class Applet7ZipTest {
             0x00 , 0x00 , 0x00 , 0x00 , 
             0x00 , 0x00 , 0x00 , 0x01
         };
-        byte[] goodPin = 
-        {
-            Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_ADMIN , 0x00 , 0x00 ,
-            0x10 , 
-            0x00 , 0x00 , 0x00 , 0x00 , 
-            0x00 , 0x00 , 0x00 , 0x00 , 
-            0x00 , 0x00 , 0x00 , 0x00 , 
-            0x00 , 0x00 , 0x00 , 0x00
-        };
         for(int i = 0 ; i < Applet7Zip.PIN_ADMIN_MAX_TRIES ; ++i)
             manager.transmitAPDU(badPin);
             
-        byte[] recv = manager.transmitAPDU(goodPin);
+        byte[] recv = manager.transmitAPDU(VALID_ADMIN_LOGIN);
         assertTrue(cmpResponseCode(recv, Applet7Zip.SW_VERIFICATION_FAILED));
     }
     
@@ -293,19 +256,10 @@ public class Applet7ZipTest {
             0x00 , 0x00 , 0x00 , 0x00 , 
             0x00 , 0x00 , 0x00 , 0x01
         };
-        byte[] goodPin = 
-        {
-            Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_ADMIN , 0x00 , 0x00 ,
-            0x10 , 
-            0x00 , 0x00 , 0x00 , 0x00 , 
-            0x00 , 0x00 , 0x00 , 0x00 , 
-            0x00 , 0x00 , 0x00 , 0x00 , 
-            0x00 , 0x00 , 0x00 , 0x00
-        };
         for(int i = 0 ; i < Applet7Zip.PIN_ADMIN_MAX_TRIES - 1 ; ++i)
             manager.transmitAPDU(badPin);
             
-        byte[] recv = manager.transmitAPDU(goodPin);
+        byte[] recv = manager.transmitAPDU(VALID_ADMIN_LOGIN);
         assertTrue(cmpResponseCode(recv, ISO7816.SW_NO_ERROR));
     }
     
@@ -326,15 +280,6 @@ public class Applet7ZipTest {
     
     @Test
     public void setAdminPinLogin() throws Exception  {
-        byte[] oldPin = 
-        {
-            Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_ADMIN , 0x00 , 0x00 ,
-            0x10 , 
-            0x00 , 0x00 , 0x00 , 0x00 , 
-            0x00 , 0x00 , 0x00 , 0x00 , 
-            0x00 , 0x00 , 0x00 , 0x00 , 
-            0x00 , 0x00 , 0x00 , 0x00
-        };
         byte[] newPin = 
         {
             Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_SET_PIN_ADMIN , 0x00 , 0x00 ,
@@ -345,7 +290,7 @@ public class Applet7ZipTest {
             0x00 , 0x00 , 0x00 , 0x01
         };
         byte[] recv;
-        recv = manager.transmitAPDU(oldPin);
+        recv = manager.transmitAPDU(VALID_ADMIN_LOGIN);
         assertTrue(cmpResponseCode(recv, ISO7816.SW_NO_ERROR));
         recv = manager.transmitAPDU(newPin);
         assertTrue(cmpResponseCode(recv, ISO7816.SW_NO_ERROR));
@@ -356,15 +301,6 @@ public class Applet7ZipTest {
     
     @Test
     public void setAdminPinBadLength() throws Exception  {
-        byte[] oldPin = 
-        {
-            Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_ADMIN , 0x00 , 0x00 ,
-            0x10 , 
-            0x00 , 0x00 , 0x00 , 0x00 , 
-            0x00 , 0x00 , 0x00 , 0x00 , 
-            0x00 , 0x00 , 0x00 , 0x00 , 
-            0x00 , 0x00 , 0x00 , 0x00
-        };
         byte[] invalidPin = 
         {
             Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_SET_PIN_ADMIN , 0x00 , 0x00 ,
@@ -375,7 +311,7 @@ public class Applet7ZipTest {
             0x00 , 0x00 , 0x00 , 0x00 , 0x00
         };
         byte[] recv;
-        recv = manager.transmitAPDU(oldPin);
+        recv = manager.transmitAPDU(VALID_ADMIN_LOGIN);
         assertTrue(cmpResponseCode(recv, ISO7816.SW_NO_ERROR));
         recv = manager.transmitAPDU(invalidPin);
         assertTrue(cmpResponseCode(recv, ISO7816.SW_DATA_INVALID));
@@ -394,26 +330,18 @@ public class Applet7ZipTest {
     
     @Test
     public void generateMasterKeyLogin() throws Exception  {
-        byte[] userLogin = {
-            Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_USER , 0x00 , 0x00 ,
-            0x04 , 0x00 , 0x00 , 0x00 , 0x00
-        };
         byte[] ins = 
         {
             Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_GENERATE_MASTER_KEY , 0x00 , 0x00 ,
             0x00
         };
-        manager.transmitAPDU(userLogin);
+        manager.transmitAPDU(VALID_USER_LOGIN);
         byte[] recv = manager.transmitAPDU(ins);
         assertTrue(cmpResponseCode(recv, ISO7816.SW_NO_ERROR));
     }
     
     @Test
     public void generateMasterKeyCtrZero() throws Exception {
-        byte[] userLogin = {
-            Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_USER , 0x00 , 0x00 ,
-            0x04 , 0x00 , 0x00 , 0x00 , 0x00
-        };
         byte[] deriveNewKey = {
             Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_DERIVE_NEW_KEY , 0x00 , 0x00 ,
             0x00
@@ -428,7 +356,7 @@ public class Applet7ZipTest {
         };
         byte[] expectedCtr = {0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , 0x00 , (byte) 0x90 , 0x00};
         byte[] recv;
-        recv = manager.transmitAPDU(userLogin);
+        recv = manager.transmitAPDU(VALID_USER_LOGIN);
         assertTrue(cmpResponseCode(recv, ISO7816.SW_NO_ERROR));
         recv = manager.transmitAPDU(deriveNewKey);
         assertTrue(cmpResponseCode(recv, ISO7816.SW_NO_ERROR));
@@ -456,16 +384,12 @@ public class Applet7ZipTest {
     
     @Test
     public void retrieveCurrentCtrLogin() throws Exception  {
-        byte[] userLogin = {
-            Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_USER , 0x00 , 0x00 ,
-            0x04 , 0x00 , 0x00 , 0x00 , 0x00
-        };
         byte[] ins = 
         {
             Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_RETRIEVE_CURRENT_CTR , 0x00 , 0x00 ,
             0x00
         };
-        manager.transmitAPDU(userLogin);
+        manager.transmitAPDU(VALID_USER_LOGIN);
         byte[] recv = manager.transmitAPDU(ins);
         assertTrue(cmpResponseCode(recv, ISO7816.SW_NO_ERROR));
         assertEquals(recv.length, (int) Applet7Zip.SIZE_COUNTER_BYTE + 2);
@@ -484,16 +408,12 @@ public class Applet7ZipTest {
     
     @Test
     public void deriveNewKeyLogin() throws Exception  {
-        byte[] userLogin = {
-            Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_USER , 0x00 , 0x00 ,
-            0x04 , 0x00 , 0x00 , 0x00 , 0x00
-        };
         byte[] ins = 
         {
             Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_DERIVE_NEW_KEY , 0x00 , 0x00 ,
             0x00
         };
-        manager.transmitAPDU(userLogin);
+        manager.transmitAPDU(VALID_USER_LOGIN);
         byte[] recv = manager.transmitAPDU(ins);
         assertTrue(cmpResponseCode(recv, ISO7816.SW_NO_ERROR));
         assertEquals(recv.length, (int) Applet7Zip.SIZE_MASTER_KEY_BYTE + 2);
@@ -512,10 +432,6 @@ public class Applet7ZipTest {
     
     @Test
     public void deriveCtrKeyLogin() throws Exception  {
-        byte[] userLogin = {
-            Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_USER , 0x00 , 0x00 ,
-            0x04 , 0x00 , 0x00 , 0x00 , 0x00
-        };
         byte[] ins = 
         {
             Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_DERIVE_CTR_KEY , 0x00 , 0x00 ,
@@ -523,7 +439,7 @@ public class Applet7ZipTest {
             0x00 , 0x00 , 0x00 , 0x00 , 
             0x00 , 0x00 , 0x00 , 0x00
         };
-        manager.transmitAPDU(userLogin);
+        manager.transmitAPDU(VALID_USER_LOGIN);
         byte[] recv = manager.transmitAPDU(ins);
         assertTrue(cmpResponseCode(recv, ISO7816.SW_NO_ERROR));
         assertEquals(recv.length, (int) Applet7Zip.SIZE_MASTER_KEY_BYTE + 2);
@@ -531,10 +447,6 @@ public class Applet7ZipTest {
     
     @Test
     public void deriveCtrKeyBadCtr() throws Exception  {
-        byte[] userLogin = {
-            Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_USER , 0x00 , 0x00 ,
-            0x04 , 0x00 , 0x00 , 0x00 , 0x00
-        };
         byte[] insBadLength = 
         {
             Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_DERIVE_CTR_KEY , 0x00 , 0x00 ,
@@ -548,7 +460,7 @@ public class Applet7ZipTest {
             0x00 , 0x00 , 0x00 , 0x00 , 
             0x00 , 0x00 , 0x00 , 0x7F
         };
-        manager.transmitAPDU(userLogin);
+        manager.transmitAPDU(VALID_USER_LOGIN);
         byte[] recv = manager.transmitAPDU(insBadLength);
         assertTrue(cmpResponseCode(recv, ISO7816.SW_DATA_INVALID));
         recv = manager.transmitAPDU(insCtrTooBig);
@@ -557,10 +469,6 @@ public class Applet7ZipTest {
     
     @Test
     public void deriveCtrKeyIsValid() throws Exception {
-        byte[] userLogin = {
-            Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_USER , 0x00 , 0x00 ,
-            0x04 , 0x00 , 0x00 , 0x00 , 0x00
-        };
         byte[] deriveNew = 
         {
             Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_DERIVE_NEW_KEY , 0x00 , 0x00 ,
@@ -573,7 +481,7 @@ public class Applet7ZipTest {
             0x00 , 0x00 , 0x00 , 0x00 , 
             0x00 , 0x00 , 0x00 , 0x01
         };
-        manager.transmitAPDU(userLogin);
+        manager.transmitAPDU(VALID_USER_LOGIN);
         byte[] rval1 = manager.transmitAPDU(deriveNew);
         byte[] rval2 = manager.transmitAPDU(deriveCtr);
         assertTrue(Arrays.areEqual(rval1, rval2));
@@ -585,12 +493,7 @@ public class Applet7ZipTest {
      * @throws Exception 
      */
     @Test
-    public void derivedKeysTest() throws Exception {
-        byte[] userLogin = {
-            Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_LOGIN_USER , 0x00 , 0x00 ,
-            0x04 , 0x00 , 0x00 , 0x00 , 0x00
-        };
-        
+    public void derivedKeysTest() throws Exception { 
         byte[] deriveNewKey = 
         {
             Applet7Zip.CLA_7ZIPAPPLET , Applet7Zip.INS_DERIVE_NEW_KEY , 0x00 , 0x00 ,
@@ -611,7 +514,7 @@ public class Applet7ZipTest {
         };
         
         /* User login */
-        byte[] recv = manager.transmitAPDU(userLogin);
+        byte[] recv = manager.transmitAPDU(VALID_USER_LOGIN);
         assertTrue(cmpResponseCode(recv , ISO7816.SW_NO_ERROR));
         
         byte[] firstKey;

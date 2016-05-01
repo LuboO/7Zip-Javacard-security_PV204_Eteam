@@ -81,9 +81,9 @@ public class Applet7Zip extends javacard.framework.Applet {
             bOffset = (short) (bOffset + 3);
             byte aLen = bArray[bOffset]; // applet data length
         }
-        /* Create RAM array set to zero */
+        /* Create RAM array set to zero characters (for PIN setting) */
         mRamArray = JCSystem.makeTransientByteArray(SIZE_RAM_ARRAY_BYTE , JCSystem.CLEAR_ON_DESELECT);
-        Util.arrayFillNonAtomic(mRamArray, (short) 0, SIZE_RAM_ARRAY_BYTE, (byte) 0x00);
+        Util.arrayFillNonAtomic(mRamArray, (short) 0, SIZE_RAM_ARRAY_BYTE, (byte) 0x30);
 
         /* Create persistent counter set to zero */
         mCounter = new byte[SIZE_COUNTER_BYTE];
@@ -96,6 +96,9 @@ public class Applet7Zip extends javacard.framework.Applet {
         mAdminPin = new OwnerPIN(PIN_ADMIN_MAX_TRIES , PIN_ADMIN_LENGTH);
         mAdminPin.update(mRamArray, (short) 0, PIN_ADMIN_LENGTH);
 
+        /* Fill ram array with binary zeroes */
+        Util.arrayFillNonAtomic(mRamArray, (short) 0, SIZE_RAM_ARRAY_BYTE, (byte) 0x00);
+        
         /* Initialize random generator */
         mRandGen = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
 
