@@ -377,6 +377,10 @@
     <ClInclude Include="..\..\Archive\Common\OutStreamWithCRC.h">
       <Filter>Archive Common</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\Crypto\SmartCardManager.h" />
+    <ClInclude Include="..\..\Common\ConvertUtils.h">
+      <Filter>Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="FM.ico">
@@ -694,6 +698,10 @@
     </ClCompile>
     <ClCompile Include="..\..\Archive\Common\OutStreamWithCRC.cpp">
       <Filter>Archive Common</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Crypto\SmartCardManager.cpp" />
+    <ClCompile Include="..\..\Common\ConvertUtils.cpp">
+      <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

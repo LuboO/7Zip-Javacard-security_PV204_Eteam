@@ -49,7 +49,7 @@
 #define GROUP_Y_SIZE_ENCRYPT 8
 #else
 #define GROUP_Y_SIZE 64
-#define GROUP_Y_SIZE_ENCRYPT 128
+#define GROUP_Y_SIZE_ENCRYPT 176
 #endif
 
 #define yPsw (yOpt + GROUP_Y_SIZE + 8)
@@ -143,6 +143,12 @@ BEGIN
 
   CONTROL   "Encrypt file &names", IDX_COMPRESS_ENCRYPT_FILE_NAMES, MY_CHECKBOX,
             g4x2, yPsw + 111, g4xs2, 10
+
+  CONTROL   "Use SmartCard key (password will be ignored)", IDX_USE_SMARTCARD, MY_CHECKBOX,
+	        g4x2, yPsw + 127, g4xs2, 10
+
+  LTEXT     "User SmartCard PIN:", IDT_SMARTCARD_PIN, g4x2, yPsw + 143, g4xs2, 8
+  EDITTEXT  IDE_SMARTCARD_PIN, g4x2, yPsw + 155, g4xs2, 14, ES_PASSWORD | ES_AUTOHSCROLL
   
   DEFPUSHBUTTON  "OK",     IDOK,     bx3, by, bxs, bys, WS_GROUP
   PUSHBUTTON     "Cancel", IDCANCEL, bx2, by, bxs, bys

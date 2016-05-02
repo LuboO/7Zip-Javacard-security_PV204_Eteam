@@ -24,6 +24,9 @@
 #define IDE_COMPRESS_PASSWORD1           120
 #define IDE_COMPRESS_PASSWORD2           121
 #define IDC_COMPRESS_ENCRYPTION_METHOD   122
+/////////////////// ADDED CODE
+#define IDE_SMARTCARD_PIN			     123
+/////////////////// ADDED CODE
 
 #define IDT_COMPRESS_ARCHIVE_FOLDER      130
 
@@ -35,6 +38,10 @@
 #define IDS_PASSWORD_NOT_MATCH          3804
 #define IDS_PASSWORD_USE_ASCII          3805
 #define IDS_PASSWORD_TOO_LONG           3806
+/////////////////// ADDED CODE
+#define IDT_SMARTCARD_PIN				3807
+#define IDX_USE_SMARTCARD               3808
+/////////////////// ADDED CODE
 
 #define IDT_COMPRESS_ARCHIVE            4001
 #define IDT_COMPRESS_UPDATE_MODE        4002

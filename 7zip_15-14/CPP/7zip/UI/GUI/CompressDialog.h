@@ -108,6 +108,9 @@ class CCompressDialog: public NWindows::NControl::CModalDialog
   NWindows::NControl::CEdit _password1Control;
   NWindows::NControl::CEdit _password2Control;
   NWindows::NControl::CComboBox _encryptionMethod;
+  /////////////////// ADDED CODE
+  NWindows::NControl::CEdit _smartcardPinControl;
+  /////////////////// ADDED CODE
 
   NCompression::CInfo m_RegistryInfo;
 
@@ -173,6 +176,9 @@ class CCompressDialog: public NWindows::NControl::CModalDialog
 
   void UpdatePasswordControl();
   bool IsShowPasswordChecked() const { return IsButtonCheckedBool(IDX_PASSWORD_SHOW); }
+  /////////////////// ADDED CODE
+  bool IsUseSmartCardChecked() const { return IsButtonCheckedBool(IDX_USE_SMARTCARD); }
+  /////////////////// ADDED CODE
 
   unsigned GetFormatIndex();
   bool SetArcPathFields(const UString &path, UString &name, bool always);

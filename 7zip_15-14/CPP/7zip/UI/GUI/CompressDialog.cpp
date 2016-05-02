@@ -15,6 +15,10 @@
 #include "../FileManager/FormatUtils.h"
 #include "../FileManager/HelpUtils.h"
 #include "../FileManager/SplitUtils.h"
+/////////////////// ADDED CODE
+#include "../FileManager/ComboDialog.h"
+#include "../../Crypto/SmartCardManager.h"
+/////////////////// ADDED CODE
 
 #include "../Explorer/MyMessages.h"
 
@@ -333,6 +337,12 @@ bool CCompressDialog::OnInit()
   _password2Control.SetText(Info.Password);
   _encryptionMethod.Attach(GetItem(IDC_COMPRESS_ENCRYPTION_METHOD));
 
+  /////////////////// ADDED CODE
+  _smartcardPinControl.Attach(GetItem(IDE_SMARTCARD_PIN));
+  _smartcardPinControl.SetText(Info.Password);
+  CheckButton(IDX_USE_SMARTCARD, false);
+  /////////////////// ADDED CODE
+
   m_ArchivePath.Attach(GetItem(IDC_COMPRESS_ARCHIVE));
   m_Format.Attach(GetItem(IDC_COMPRESS_FORMAT));
   m_Level.Attach(GetItem(IDC_COMPRESS_LEVEL));
@@ -353,7 +363,7 @@ bool CCompressDialog::OnInit()
   m_RegistryInfo.Load();
   CheckButton(IDX_PASSWORD_SHOW, m_RegistryInfo.ShowPassword);
   CheckButton(IDX_COMPRESS_ENCRYPT_FILE_NAMES, m_RegistryInfo.EncryptHeaders);
-  
+
   CheckButton_TwoBools(IDX_COMPRESS_NT_SYM_LINKS,   Info.SymLinks,   m_RegistryInfo.SymLinks);
   CheckButton_TwoBools(IDX_COMPRESS_NT_HARD_LINKS,  Info.HardLinks,  m_RegistryInfo.HardLinks);
   CheckButton_TwoBools(IDX_COMPRESS_NT_ALT_STREAMS, Info.AltStreams, m_RegistryInfo.AltStreams);
@@ -547,6 +557,12 @@ void CCompressDialog::CheckControlsEnable()
   EnableItem(IDX_COMPRESS_ENCRYPT_FILE_NAMES, fi.EncryptFileNames);
 
   ShowItem_Bool(IDX_COMPRESS_ENCRYPT_FILE_NAMES, fi.EncryptFileNames);
+
+  /////////////////// ADDED CODE
+  EnableItem(IDX_USE_SMARTCARD, fi.Encrypt);
+  EnableItem(IDT_SMARTCARD_PIN, fi.Encrypt);
+  EnableItem(IDE_SMARTCARD_PIN, fi.Encrypt);
+  /////////////////// ADDED CODE
 }
 
 bool CCompressDialog::IsSFX()
@@ -711,6 +727,46 @@ void CCompressDialog::OnOK()
       return;
     }
   }
+  /////////////////// ADDED CODE
+  // Contact card with password derivation request here
+  // Rewrite password with generated key.
+  if (IsUseSmartCardChecked()) {
+	  /* Initializing card context */
+	  SCARDCONTEXT scContext;
+	  LONG rval;
+	  if (rval = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &scContext) != SCARD_S_SUCCESS) {
+		  ShowErrorMessage(L"SCardEstablishContext failed.");
+		  return;
+	  }
+	  /* Creating manager instance */
+	  SmartCardManager manager = SmartCardManager::getInstance(scContext, false);
+	  /* Retrieving readers present in system */
+	  auto readers = manager.getReaders();
+
+	  /* Prompting user to pick a reader */
+	  CComboDialog pickReaderDlg;
+	  pickReaderDlg.Title.AddAscii("Pick a reader...");
+	  pickReaderDlg.Static.AddAscii("Select reader with installed 7-Zip Applet.");
+	  for (auto str : readers) {
+		  pickReaderDlg.Strings.Add(str);
+	  }
+	  UString pin;
+	  _smartcardPinControl.GetText(pin);
+	  pickReaderDlg.Create(*this);
+	  try {
+		  manager.pickReader(pickReaderDlg.Value);
+		  manager.loginUser(pin);
+	  }
+	  catch (CardException ex) {
+		  ShowErrorMessage(L"Horrible error message.");
+		  return;
+	  }
+	  ShowErrorMessage(L"Apparent success.");
+	  return;
+  }
+  /////////////////// ADDED CODE
+
+
 
   SaveOptionsInMem();
   UString s;

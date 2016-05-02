@@ -181,7 +181,7 @@
       <FunctionLevelLinking>false</FunctionLevelLinking>
       <Optimization>Disabled</Optimization>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <WarningLevel>Level4</WarningLevel>
+      <WarningLevel>Level3</WarningLevel>
       <TreatWarningAsError>false</TreatWarningAsError>
       <MinimalRebuild>true</MinimalRebuild>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
@@ -215,7 +215,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <OutputFile>$(TargetPath)</OutputFile>
-      <AdditionalDependencies>odbc32.lib;odbccp32.lib;comctl32.lib;htmlhelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>"$(SDK35ToolsPath)..\..\v7.1A\Lib\WinSCard.Lib";odbc32.lib;odbccp32.lib;comctl32.lib;htmlhelp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseU|Win32'">
@@ -307,6 +307,7 @@
     <ClInclude Include="..\..\..\Windows\TimeUtils.h" />
     <ClInclude Include="..\..\..\Windows\Window.h" />
     <ClInclude Include="..\..\Archive\Common\OutStreamWithCRC.h" />
+    <ClInclude Include="..\..\Common\ConvertUtils.h" />
     <ClInclude Include="..\..\Common\CreateCoder.h" />
     <ClInclude Include="..\..\Common\FilePathAutoRename.h" />
     <ClInclude Include="..\..\Common\FileStreams.h" />
@@ -318,6 +319,7 @@
     <ClInclude Include="..\..\Common\StreamUtils.h" />
     <ClInclude Include="..\..\Common\UniqBlocks.h" />
     <ClInclude Include="..\..\Compress\CopyCoder.h" />
+    <ClInclude Include="..\..\Crypto\SmartCardManager.h" />
     <ClInclude Include="..\Common\ArchiveCommandLine.h" />
     <ClInclude Include="..\Common\ArchiveExtractCallback.h" />
     <ClInclude Include="..\Common\ArchiveOpenCallback.h" />
@@ -480,6 +482,7 @@
     <ClCompile Include="..\..\..\Windows\TimeUtils.cpp" />
     <ClCompile Include="..\..\..\Windows\Window.cpp" />
     <ClCompile Include="..\..\Archive\Common\OutStreamWithCRC.cpp" />
+    <ClCompile Include="..\..\Common\ConvertUtils.cpp" />
     <ClCompile Include="..\..\Common\CreateCoder.cpp" />
     <ClCompile Include="..\..\Common\FilePathAutoRename.cpp" />
     <ClCompile Include="..\..\Common\FileStreams.cpp" />
@@ -492,6 +495,7 @@
     <ClCompile Include="..\..\Common\StreamUtils.cpp" />
     <ClCompile Include="..\..\Common\UniqBlocks.cpp" />
     <ClCompile Include="..\..\Compress\CopyCoder.cpp" />
+    <ClCompile Include="..\..\Crypto\SmartCardManager.cpp" />
     <ClCompile Include="..\Common\ArchiveCommandLine.cpp" />
     <ClCompile Include="..\Common\ArchiveExtractCallback.cpp" />
     <ClCompile Include="..\Common\ArchiveOpenCallback.cpp" />
