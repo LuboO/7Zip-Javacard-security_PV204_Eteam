@@ -13,6 +13,11 @@
 #include "../FileManager/HelpUtils.h"
 #endif
 
+/////////////////// ADDED CODE
+#include "../FileManager/ComboDialog.h"
+#include "../../Crypto/SmartCardManager.h"
+#include "../Explorer/MyMessages.h"
+/////////////////// ADDED CODE
 
 #include "../FileManager/BrowseDialog.h"
 #include "../FileManager/LangUtils.h"
@@ -159,6 +164,11 @@ bool CExtractDialog::OnInit()
   _pathName.Attach(GetItem(IDE_EXTRACT_NAME));
   #endif
 
+// added code
+  _smartcardPinControl.Attach(GetItem(IDE_SMARTCARD_PIN_EX));
+  _smartcardPinControl.SetText("");
+  CheckButton(IDX_USE_SMARTCARD_EX, false);
+
   #ifdef NO_REGISTRY
   
   PathMode = NExtract::NPathMode::kFullPaths;
@@ -294,6 +304,9 @@ void AddUniqueString(UStringVector &list, const UString &s)
   list.Add(s);
 }
 
+
+
+
 void CExtractDialog::OnOK()
 {
   #ifndef _SFX
@@ -370,6 +383,9 @@ void CExtractDialog::OnOK()
   
   #ifndef _SFX
   
+  
+
+
   bool splitDest = IsButtonCheckedBool(IDX_EXTRACT_NAME_ENABLE);
   if (splitDest)
   {
@@ -404,6 +420,57 @@ void CExtractDialog::OnOK()
     }
   _info.Save();
   #endif
+
+
+  // Added code
+
+  if (IsUseSmartCardChecked()) {
+	  /* Retrieving smartcard PIN */
+	  UString pin;
+	  _smartcardPinControl.GetText(pin);
+	  /* Initializing card context */
+	  SCARDCONTEXT scContext;
+	  LONG rval;
+	  if (rval = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &scContext) != SCARD_S_SUCCESS) {
+		  ShowErrorMessage( L"SmartCard context establishing failed!");
+		  return;
+	  }
+	  /* Creating manager instance */
+	  SmartCardManager manager = SmartCardManager::getInstance(scContext/*, false*/);
+	  /* Retrieving readers present in system */
+	  auto readers = manager.getReaders();
+	  /* Prompting user to pick a reader */
+	  CComboDialog pickReaderDlg;
+	  pickReaderDlg.Title.AddAscii("Pick a reader...");
+	  pickReaderDlg.Static.AddAscii("Select reader with installed 7-Zip Applet.");
+	  for (auto str : readers) {
+		  pickReaderDlg.Strings.Add(str);
+	  }
+	  pickReaderDlg.Create(*this);
+	  try {
+		  /* Selecting reader */
+		  manager.pickReader(pickReaderDlg.Value);
+		  /* User login */
+		  manager.loginUser(pin);
+		  /* 
+		  TODO: HERE CARD INTERACTION 
+		  */
+		
+	  }
+	  catch (CardException ex) {
+		  ShowErrorMessage( ConvertUtils::cvrtStrToUni(ex.what()));
+		  SCardReleaseContext(scContext);
+		  return;
+	  }
+	  SCardReleaseContext(scContext);
+  }
+
+
+
+
+
+
+
   
   CModalDialog::OnOK();
 }

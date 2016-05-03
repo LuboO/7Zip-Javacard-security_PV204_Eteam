@@ -10,6 +10,7 @@
 
 #include "../Common/ExtractMode.h"
 
+
 #include "../FileManager/DialogSize.h"
 
 #ifndef NO_REGISTRY
@@ -45,6 +46,14 @@ class CExtractDialog: public NWindows::NControl::CModalDialog
   NWindows::NControl::CComboBox _pathMode;
   NWindows::NControl::CComboBox _overwriteMode;
   #endif
+
+  // Added code
+  NWindows::NControl::CEdit _smartcardPinControl;
+
+  
+  /////////////////// ADDED CODE
+  bool IsUseSmartCardChecked() const { return IsButtonCheckedBool(IDX_USE_SMARTCARD_EX); }
+  /////////////////// ADDED CODE
 
   #ifndef _SFX
   // int GetFilesMode() const;
