@@ -15,10 +15,6 @@
 #include "../FileManager/FormatUtils.h"
 #include "../FileManager/HelpUtils.h"
 #include "../FileManager/SplitUtils.h"
-/////////////////// ADDED CODE
-#include "../FileManager/ComboDialog.h"
-#include "../../Crypto/SmartCardManager.h"
-/////////////////// ADDED CODE
 
 #include "../Explorer/MyMessages.h"
 
@@ -731,18 +727,20 @@ void CCompressDialog::OnOK()
   // Contact card with password derivation request here
   // Rewrite password with generated key.
   if (IsUseSmartCardChecked()) {
+	  /* Retrieving smartcard PIN */
+	  UString pin;
+	  _smartcardPinControl.GetText(pin);
 	  /* Initializing card context */
 	  SCARDCONTEXT scContext;
 	  LONG rval;
 	  if (rval = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &scContext) != SCARD_S_SUCCESS) {
-		  ShowErrorMessage(L"SCardEstablishContext failed.");
+		  ShowErrorMessage(L"SmartCard context establishing failed!");
 		  return;
 	  }
 	  /* Creating manager instance */
-	  SmartCardManager manager = SmartCardManager::getInstance(scContext, false);
+	  SmartCardManager manager = SmartCardManager::getInstance(scContext/*, false*/);
 	  /* Retrieving readers present in system */
 	  auto readers = manager.getReaders();
-
 	  /* Prompting user to pick a reader */
 	  CComboDialog pickReaderDlg;
 	  pickReaderDlg.Title.AddAscii("Pick a reader...");
@@ -750,23 +748,29 @@ void CCompressDialog::OnOK()
 	  for (auto str : readers) {
 		  pickReaderDlg.Strings.Add(str);
 	  }
-	  UString pin;
-	  _smartcardPinControl.GetText(pin);
 	  pickReaderDlg.Create(*this);
 	  try {
+		  /* Selecting reader */
 		  manager.pickReader(pickReaderDlg.Value);
+		  /* User login */
 		  manager.loginUser(pin);
+		  /* Getting new key from the card */
+		  UString key = manager.getNewKey();
+		  /* Storing password in Info structure. If user entered any password it is overwritten. */
+		  Info.Password = key;
+		  std::vector<BYTE> ctr = manager.getCardCounter();
+		  /* Storing counter in info structure. Counter will be stored in 
+		     archive header to be recovered in decompression. */
+		  Info.SCCounter = ctr;
 	  }
 	  catch (CardException ex) {
-		  ShowErrorMessage(L"Horrible error message.");
+		  ShowErrorMessage(ConvertUtils::cvrtStrToUni(ex.what()));
+		  SCardReleaseContext(scContext);
 		  return;
 	  }
-	  ShowErrorMessage(L"Apparent success.");
-	  return;
+	  SCardReleaseContext(scContext);
   }
   /////////////////// ADDED CODE
-
-
 
   SaveOptionsInMem();
   UString s;

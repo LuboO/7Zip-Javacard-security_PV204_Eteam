@@ -59,7 +59,7 @@ public:
 	 *@param debugInfo If set to true, bytes will be printed on screen during transmission.
 	 *@return initialized instance
 	 */
-	static SmartCardManager getInstance(const SCARDCONTEXT & ctx , bool debugInfo);
+	static SmartCardManager getInstance(const SCARDCONTEXT & ctx/* , bool debugInfo*/);
 
 	/**
 	 *@brief Destructor, disconnects from card.
@@ -78,13 +78,11 @@ public:
 	 */
 	void pickReader(const UString & readerName);
 
-	
-
 	void loginUser(const UString & userPassword) const;
 
 	UString getNewKey() const;
 
-	UString getCardCounter() const;
+	std::vector<BYTE> getCardCounter() const;
 
 	UString getCtrKey(const std::vector<BYTE> & counter) const;
 
@@ -92,7 +90,7 @@ private:
 	const SCARDCONTEXT & context;
 	SCARDHANDLE hCard = 0;
 	DWORD cardProtocol;
-	bool debugInfo = false;
+	//bool debugInfo = false;
 
 	static const int APDU_PACKET_MAX_SIZE = 256;
 
@@ -106,6 +104,12 @@ private:
 	static const BYTE INS_RETRIEVE_CURRENT_CTR = 0x75;
 	static const BYTE INS_DERIVE_NEW_KEY = 0x76;
 	static const BYTE INS_DERIVE_CTR_KEY = 0x77;
+
+	/* Return codes used by card */
+	static const int SW_NO_ERROR = 0x9000;
+	static const int SW_INCORRECT_P1P2 = 0x6A86;
+	static const int SW_VERIFICATION_FAILED = 0x6300;
+	static const int SW_PIN_VERIFICATION_REQUIRED = 0x6301;
 
 	SmartCardManager(const SCARDCONTEXT & ctx) : context(ctx) {}
 	/**
@@ -124,4 +128,6 @@ private:
 	 */
 	std::vector<BYTE> constructApdu(BYTE instruction,
 		                            const std::vector<BYTE> & data) const;
+
+	int getRetCode(const std::vector<BYTE> & response) const;
 };

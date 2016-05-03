@@ -15,6 +15,11 @@
 
 #include "CompressDialogRes.h"
 
+/////////////////// ADDED CODE
+#include "../FileManager/ComboDialog.h"
+#include "../../Crypto/SmartCardManager.h"
+/////////////////// ADDED CODE
+
 namespace NCompressDialog
 {
   namespace NUpdateMode
@@ -68,6 +73,7 @@ namespace NCompressDialog
     int FormatIndex;
 
     UString Password;
+	std::vector<BYTE> SCCounter;
     bool EncryptHeadersIsAllowed;
     bool EncryptHeaders;
 

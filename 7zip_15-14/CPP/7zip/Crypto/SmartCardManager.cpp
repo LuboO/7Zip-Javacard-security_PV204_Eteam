@@ -9,13 +9,13 @@ const std::vector<BYTE> SmartCardManager::selectAppletCommand = {
 	0x6C, 0x65, 0x74
 };
 
-SmartCardManager SmartCardManager::getInstance(const SCARDCONTEXT & ctx , bool debugInfo) {
+SmartCardManager SmartCardManager::getInstance(const SCARDCONTEXT & ctx/* , bool debugInfo*/) {
 	LONG rval = 0;
 	if ((rval = SCardIsValidContext(ctx)) != SCARD_S_SUCCESS)
-		throw CardException("SCardIsValidContext", rval);
+		throw CardException("Manager initialized with invalid context.");
 
 	SmartCardManager mngr(ctx);
-	mngr.debugInfo = debugInfo;
+	//mngr.debugInfo = debugInfo;
 
 	return mngr;
 }
@@ -23,12 +23,13 @@ SmartCardManager SmartCardManager::getInstance(const SCARDCONTEXT & ctx , bool d
 SmartCardManager::~SmartCardManager() {
 	if(hCard != 0)
 		SCardDisconnect(hCard, SCARD_LEAVE_CARD);
+	hCard = 0;
 }
 
 std::vector<UString> SmartCardManager::getReaders() const {
 	LONG rval = 0;
 	if ((rval = SCardIsValidContext(context)) != SCARD_S_SUCCESS)
-		throw CardException("SCardIsValidContext" , rval);
+		throw CardException("Card context is no longer valid!");
 
 	LPTSTR pReaderList = NULL;
 	LPTSTR pReaders = NULL;
@@ -40,7 +41,7 @@ std::vector<UString> SmartCardManager::getReaders() const {
 		(LPTSTR)&pReaderList,
 		&cch);
 	if (rval != SCARD_S_SUCCESS && rval != SCARD_E_NO_READERS_AVAILABLE)
-		throw CardException("SCardListReaders", rval);
+		throw CardException("SCardListReaders failed", rval);
 	
 	std::vector<UString> readers;
 	std::string reader;
@@ -61,7 +62,7 @@ std::vector<UString> SmartCardManager::getReaders() const {
 		++pReaders;
 	}
 	if ((rval = SCardFreeMemory(context, pReaderList)) != SCARD_S_SUCCESS)
-		throw CardException("SCardFreeMemory", rval);
+		throw CardException("SCardFreeMemory failed", rval);
 
 	return readers;
 }
@@ -69,7 +70,7 @@ std::vector<UString> SmartCardManager::getReaders() const {
 void SmartCardManager::pickReader(const UString & readerName) {
 	LONG rval = 0;
 	if((rval = SCardIsValidContext(context)) != SCARD_S_SUCCESS)
-		throw CardException("SCardIsValidContext" , rval);
+		throw CardException("Card context is no longer valid.");
 
 	rval = SCardConnect(
 		context,
@@ -78,8 +79,12 @@ void SmartCardManager::pickReader(const UString & readerName) {
 		SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1,
 		&hCard,
 		&cardProtocol);
-	if (rval != SCARD_S_SUCCESS)
-		throw CardException("SCardConnect", rval);
+	if (rval != SCARD_S_SUCCESS) {
+		if (rval == SCARD_E_UNKNOWN_READER)
+			throw CardException("Invalid reader name entered.");
+		else
+			throw CardException("SCardConnect failed", rval);
+	}
 
 	/* Only for testing */
 	transmit({
@@ -92,38 +97,78 @@ void SmartCardManager::pickReader(const UString & readerName) {
 	});
 
 	/* Selects 7Zip applet on the card */
-	transmit(selectAppletCommand);
+	if ((rval = getRetCode(transmit(selectAppletCommand))) != SW_NO_ERROR) {
+		if (rval == SW_INCORRECT_P1P2) {
+			throw CardException("Applet isn't installed or can't be selected on device.");
+		}
+		else {
+			throw CardException("Invalid card response", rval);
+		}
+	}
 }
 
 void SmartCardManager::loginUser(const UString & userPassword) const {
 	auto loginUser = constructApdu(INS_LOGIN_USER, ConvertUtils::cvrtUniToByteArr(userPassword));
-	auto rval = transmit(loginUser);
+	int  retCode   = 0;
+	if ((retCode = getRetCode(transmit(loginUser))) != SW_NO_ERROR) {
+		if (retCode == SW_VERIFICATION_FAILED) 
+			throw CardException("Incorrect user PIN entered.");
+		throw CardException("Invalid card response", retCode);
+	}
 }
 
 UString SmartCardManager::getNewKey() const {
-	return UString();
+	auto getKeyIns  = constructApdu(INS_DERIVE_NEW_KEY, {});
+	auto derivedKey = transmit(getKeyIns);
+	int  retCode    = 0;
+	if ((retCode = getRetCode(derivedKey)) != SW_NO_ERROR) {
+		if (retCode == SW_PIN_VERIFICATION_REQUIRED)
+			throw CardException("Card operation requires user authorization.");
+		throw CardException("Invalid card response", retCode);
+	}
+	/* Convert received binary key to Base64 (so it can be used as password). 
+	   Last two bytes are response bytes and ignored. */
+	return ConvertUtils::encodeBase64(&derivedKey[0], derivedKey.size() - 2);
 }
 
-UString SmartCardManager::getCardCounter() const {
-	return UString();
+std::vector<BYTE> SmartCardManager::getCardCounter() const {
+	auto getCounter = constructApdu(INS_RETRIEVE_CURRENT_CTR, {});
+	auto counter    = transmit(getCounter);
+	int  retCode    = 0;
+	if ((retCode = getRetCode(counter)) != SW_NO_ERROR) {
+		if (retCode == SW_PIN_VERIFICATION_REQUIRED) 
+			throw CardException("Card operation requires user authorization.");
+		throw CardException("Invalid card response", retCode);
+	}
+	/* Return counter except for last two bytes */
+	return std::vector<BYTE>(counter.begin(), counter.end() - 2);
 }
 
 UString SmartCardManager::getCtrKey(const std::vector<BYTE>& counter) const {
-	return UString();
+	auto getKeyIns  = constructApdu(INS_DERIVE_CTR_KEY, counter);
+	auto derivedKey = transmit(getKeyIns);
+	int  retCode    = 0;
+	if ((retCode = getRetCode(derivedKey)) != SW_NO_ERROR) {
+		if (retCode == SW_PIN_VERIFICATION_REQUIRED)
+			throw CardException("Card operation requires user authorization.");
+		throw CardException("Invalid card response", retCode);
+	}
+	/* Convert binary key to Base64, last two bytes are response bytes and are not included */
+	return ConvertUtils::encodeBase64(&derivedKey[0], derivedKey.size() - 2);
 }
 
 std::vector<BYTE> SmartCardManager::transmit(const std::vector<BYTE>& bufferSend) const {
 	if (hCard == 0)
-		throw CardException("reader was not picked");
+		throw CardException("Card reader was not selected!");
 
-	if (debugInfo) {
+	/*if (debugInfo) {
 		std::cout << "Transmission start" << std::endl;
 		std::cout << ">>>>" << std::endl;
 		for (BYTE b : bufferSend)
 			std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)b << " ";
 
 		std::cout << std::endl << ">>>>" << std::endl;
-	}
+	}*/
 
 	/* Pick right protocol for communication */
 	const SCARD_IO_REQUEST * protocol;
@@ -154,14 +199,14 @@ std::vector<BYTE> SmartCardManager::transmit(const std::vector<BYTE>& bufferSend
 		throw CardException("SCardTransmmit", rval);
 
 	/* Check last two bytes of response */
-	if (bufferReceive[bufferReceiveSize - 2] != 0x90
+	/*if (bufferReceive[bufferReceiveSize - 2] != 0x90
 		|| bufferReceive[bufferReceiveSize - 1] != 00)
 		throw CardException(
 			"bad response",
 			bufferReceive[bufferReceiveSize - 2],
-			bufferReceive[bufferReceiveSize - 1]);
+			bufferReceive[bufferReceiveSize - 1]);*/
 
-	if (debugInfo) {
+	/*if (debugInfo) {
 		std::cout << "<<<<" << std::endl;
 		for (size_t i = 0; i < bufferReceiveSize; ++i)
 			std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)bufferReceive[i] << " ";
@@ -169,15 +214,15 @@ std::vector<BYTE> SmartCardManager::transmit(const std::vector<BYTE>& bufferSend
 		std::cout << std::endl;
 		std::cout << "<<<<" << std::endl;
 		std::cout << "Transmission end" << std::endl;
-	}
-
+	}*/
+	bufferReceive.resize(bufferReceiveSize);
 	return bufferReceive;
 }
 
 std::vector<BYTE> SmartCardManager::constructApdu(BYTE instruction,
 	                                              const std::vector<BYTE>& data) const {
 	if (data.size() > APDU_PACKET_MAX_SIZE)
-		throw CardException("supplied data are too big for communication");
+		throw CardException("Maximum size of APDU buffer exceeded!");
 
 	std::vector<BYTE> apdu(5, 0);
 	apdu[0] = CLA_7ZIPAPPLET;
@@ -187,4 +232,14 @@ std::vector<BYTE> SmartCardManager::constructApdu(BYTE instruction,
 		apdu.push_back(i);
 	}
 	return apdu;
+}
+
+int SmartCardManager::getRetCode(const std::vector<BYTE> & response) const {
+	int rval = 0;
+	if (response.size() < 2)
+		throw CardException("Can't read card response!");
+	
+	rval =  (int) response.at(response.size() - 2) << 8;
+	rval |= (int) response.at(response.size() - 1);
+	return rval;
 }
