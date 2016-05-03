@@ -73,7 +73,6 @@ namespace NCompressDialog
     int FormatIndex;
 
     UString Password;
-	std::vector<BYTE> SCCounter;
     bool EncryptHeadersIsAllowed;
     bool EncryptHeaders;
 

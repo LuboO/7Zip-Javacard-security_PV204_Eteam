@@ -19,7 +19,6 @@
 #include "../Explorer/MyMessages.h"
 
 #include "../Common/ZipRegistry.h"
-
 #include "CompressDialog.h"
 
 #ifndef _UNICODE
@@ -723,6 +722,15 @@ void CCompressDialog::OnOK()
       return;
     }
   }
+
+  SaveOptionsInMem();
+  UString s;
+  if (!GetFinalPath_Smart(s))
+  {
+	  ShowErrorMessage(*this, k_IncorrectPathMessage);
+	  return;
+  }
+
   /////////////////// ADDED CODE
   // Contact card with password derivation request here
   // Rewrite password with generated key.
@@ -758,10 +766,21 @@ void CCompressDialog::OnOK()
 		  UString key = manager.getNewKey();
 		  /* Storing password in Info structure. If user entered any password it is overwritten. */
 		  Info.Password = key;
-		  std::vector<BYTE> ctr = manager.getCardCounter();
-		  /* Storing counter in info structure. Counter will be stored in 
-		     archive header to be recovered in decompression. */
-		  Info.SCCounter = ctr;
+		  /* Embedding counter value in filename */
+		  /* Counter will be extracted in decompression */
+		  std::string fname = ConvertUtils::cvrtUniToStr(s);
+		  size_t lastSeparPos = fname.find_last_of("/\\");
+		  size_t lastDotPos   = fname.find_last_of(".");
+		  UString toInsert;
+		  toInsert.AddAscii("#!");
+		  toInsert += manager.getCardCounter();
+
+		  size_t insertAt;
+		  if (lastDotPos == std::string::npos)        insertAt = s.Len();
+		  else if (lastSeparPos == std::string::npos) insertAt = lastDotPos;
+		  else if (lastDotPos > lastSeparPos)         insertAt = lastDotPos;
+		  else                                        insertAt = s.Len();
+		  s.Insert(insertAt, toInsert);
 	  }
 	  catch (CardException ex) {
 		  ShowErrorMessage(ConvertUtils::cvrtStrToUni(ex.what()));
@@ -771,14 +790,6 @@ void CCompressDialog::OnOK()
 	  SCardReleaseContext(scContext);
   }
   /////////////////// ADDED CODE
-
-  SaveOptionsInMem();
-  UString s;
-  if (!GetFinalPath_Smart(s))
-  {
-    ShowErrorMessage(*this, k_IncorrectPathMessage);
-    return;
-  }
 
   m_RegistryInfo.ArcPaths.Clear();
   AddUniqueString(m_RegistryInfo.ArcPaths, s);
@@ -849,6 +860,8 @@ void CCompressDialog::OnOK()
       }
     }
   }
+
+
 
   for (int i = 0; i < m_ArchivePath.GetCount(); i++)
   {

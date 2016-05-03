@@ -87,14 +87,14 @@ void SmartCardManager::pickReader(const UString & readerName) {
 	}
 
 	/* Only for testing */
-	transmit({
+	/*transmit({
 		0x80, 0xb8, 0x00, 0x00,
 		0x11, 0x0A, 0x37, 0x5A,
 		0x69, 0x70, 0x41, 0x70,
 		0x70, 0x6C, 0x65, 0x74,
 		0x05, 0x00, 0x00, 0x02,
 		0x0F, 0x0F
-	});
+	});*/
 
 	/* Selects 7Zip applet on the card */
 	if ((rval = getRetCode(transmit(selectAppletCommand))) != SW_NO_ERROR) {
@@ -131,7 +131,7 @@ UString SmartCardManager::getNewKey() const {
 	return ConvertUtils::encodeBase64(&derivedKey[0], derivedKey.size() - 2);
 }
 
-std::vector<BYTE> SmartCardManager::getCardCounter() const {
+UString SmartCardManager::getCardCounter() const {
 	auto getCounter = constructApdu(INS_RETRIEVE_CURRENT_CTR, {});
 	auto counter    = transmit(getCounter);
 	int  retCode    = 0;
@@ -141,7 +141,8 @@ std::vector<BYTE> SmartCardManager::getCardCounter() const {
 		throw CardException("Invalid card response", retCode);
 	}
 	/* Return counter except for last two bytes */
-	return std::vector<BYTE>(counter.begin(), counter.end() - 2);
+	//return std::vector<BYTE>(counter.begin(), counter.end() - 2);
+	return ConvertUtils::encodeBase64(&counter[0], counter.size() - 2);
 }
 
 UString SmartCardManager::getCtrKey(const std::vector<BYTE>& counter) const {

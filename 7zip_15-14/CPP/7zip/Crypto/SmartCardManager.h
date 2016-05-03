@@ -82,7 +82,7 @@ public:
 
 	UString getNewKey() const;
 
-	std::vector<BYTE> getCardCounter() const;
+	UString getCardCounter() const;
 
 	UString getCtrKey(const std::vector<BYTE> & counter) const;
 

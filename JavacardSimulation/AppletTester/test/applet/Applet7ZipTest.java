@@ -417,6 +417,9 @@ public class Applet7ZipTest {
         byte[] recv = manager.transmitAPDU(ins);
         assertTrue(cmpResponseCode(recv, ISO7816.SW_NO_ERROR));
         assertEquals(recv.length, (int) Applet7Zip.SIZE_MASTER_KEY_BYTE + 2);
+        manager.transmitAPDU(ins);
+        manager.transmitAPDU(ins);
+        manager.transmitAPDU(ins);
     }
     
     @Test
