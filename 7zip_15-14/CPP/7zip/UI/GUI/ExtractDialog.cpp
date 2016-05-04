@@ -429,7 +429,7 @@ void CExtractDialog::OnOK()
 
 	  // Added code
 	  if (_path.GetCount() > 1)
-		  ShowErrorMessage("Extract one by one please");
+		  ShowErrorMessage((LPCWSTR)"Extract one by one please");
 
 	  
 	  UString filename = UString::UString(_info.Paths.Front());
