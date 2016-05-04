@@ -164,10 +164,11 @@ bool CExtractDialog::OnInit()
   _pathName.Attach(GetItem(IDE_EXTRACT_NAME));
   #endif
 
-// added code
+  /////////////////// ADDED CODE
   _smartcardPinControl.Attach(GetItem(IDE_SMARTCARD_PIN_EX));
   _smartcardPinControl.SetText("");
   CheckButton(IDX_USE_SMARTCARD_EX, false);
+  /////////////////// ADDED CODE
 
   #ifdef NO_REGISTRY
   
@@ -358,6 +359,51 @@ void CExtractDialog::OnOK()
 
   #endif
   
+  /////////////////// ADDED CODE
+  // Extract counter from filename, contact card and derive decompression key
+  // Password is rewritten with derived key
+  if (IsUseSmartCardChecked()) {
+	  /* Retrieving smartcard PIN */
+	  UString pin;
+	  _smartcardPinControl.GetText(pin);
+	  /* Initializing card context */
+	  SCARDCONTEXT scContext;
+	  LONG rval;
+	  if (rval = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &scContext) != SCARD_S_SUCCESS) {
+	     ShowErrorMessage( L"SmartCard context establishing failed!");
+	     return;
+	  }
+	  /* Creating manager instance */
+	  SmartCardManager manager = SmartCardManager::getInstance(scContext/*, false*/);
+	  /* Retrieving readers present in system */
+	  auto readers = manager.getReaders();
+	  /* Prompting user to pick a reader */
+	  CComboDialog pickReaderDlg;
+	  pickReaderDlg.Title.AddAscii("Pick a reader...");
+	  pickReaderDlg.Static.AddAscii("Select reader with installed 7-Zip Applet.");
+	  for (auto str : readers) {
+	    pickReaderDlg.Strings.Add(str);
+	  }
+	  pickReaderDlg.Create(*this);
+	  try {
+	   /* Selecting reader */
+	   manager.pickReader(pickReaderDlg.Value);
+	   /* User login */
+	   manager.loginUser(pin);
+     /* Recover password from card */
+     UString key = manager.getCtrKey(SmartCardManager::extractCounterFromArcName(ArcPath));
+     /* Set password */
+     Password = key;
+	  }
+	  catch (CardException ex) {
+	    ShowErrorMessage(ConvertUtils::cvrtStrToUni(ex.what()));
+	    SCardReleaseContext(scContext);
+	    return;
+	  }
+	  SCardReleaseContext(scContext);
+  }
+	/////////////////// ADDED CODE
+
   UString s;
   
   #ifdef NO_REGISTRY
@@ -383,9 +429,6 @@ void CExtractDialog::OnOK()
   
   #ifndef _SFX
   
-  
-
-
   bool splitDest = IsButtonCheckedBool(IDX_EXTRACT_NAME_ENABLE);
   if (splitDest)
   {
@@ -424,72 +467,8 @@ void CExtractDialog::OnOK()
  
   #endif
 
-
-  if (IsUseSmartCardChecked()) {
-
-	  // Added code
-	  if (_path.GetCount() > 1)
-		  ShowErrorMessage((LPCWSTR)"Extract one by one please");
-
-	  
-	  UString filename = UString::UString(_info.Paths.Front());
-
-
-	  /* Retrieving smartcard PIN */
-	  UString pin;
-	  _smartcardPinControl.GetText(pin);
-	  /* Initializing card context */
-	  SCARDCONTEXT scContext;
-	  LONG rval;
-	  if (rval = SCardEstablishContext(SCARD_SCOPE_SYSTEM, NULL, NULL, &scContext) != SCARD_S_SUCCESS) {
-		  ShowErrorMessage( L"SmartCard context establishing failed!");
-		  return;
-	  }
-	  /* Creating manager instance */
-	  SmartCardManager manager = SmartCardManager::getInstance(scContext/*, false*/);
-	  /* Retrieving readers present in system */
-	  auto readers = manager.getReaders();
-	  /* Prompting user to pick a reader */
-	  CComboDialog pickReaderDlg;
-	  pickReaderDlg.Title.AddAscii("Pick a reader...");
-	  pickReaderDlg.Static.AddAscii("Select reader with installed 7-Zip Applet.");
-	  for (auto str : readers) {
-		  pickReaderDlg.Strings.Add(str);
-	  }
-	  pickReaderDlg.Create(*this);
-	  try {
-		  /* Selecting reader */
-		  manager.pickReader(pickReaderDlg.Value);
-		  /* User login */
-		  manager.loginUser(pin);
-		  /* 
-		  TODO: HERE CARD INTERACTION 
-		  */
-		  
-		  int startBase64 = filename.Find((wchar_t *)"#!");
-		  filename.DeleteFrontal(startBase64+2);
-		  
-		  std::vector<BYTE> decoded = ConvertUtils::decodeBase64(ConvertUtils::cvrtUniToStr(filename));
-		  UString key = manager.getCtrKey(decoded);
-		  Password = key;
-		  
-		
-	  }
-	  catch (CardException ex) {
-		  ShowErrorMessage( ConvertUtils::cvrtStrToUni(ex.what()));
-		  SCardReleaseContext(scContext);
-		  return;
-	  }
-	  SCardReleaseContext(scContext);
-  }
-
-
-
-
   _info.Save();
 
-
-  
   CModalDialog::OnOK();
 }
 

@@ -7,12 +7,14 @@
 #define IDC_EXTRACT_OVERWRITE_MODE   103
 
 #define IDE_EXTRACT_PASSWORD         120
+#define IDT_EXTRACT_PASSWORD         121
+
 #define IDX_USE_SMARTCARD_EX         150
 #define IDE_SMARTCARD_PIN_EX         151
+#define IDT_SMARTCARD_PIN_EX         152
 
 #define IDE_EXTRACT_NAME             130
 #define IDX_EXTRACT_NAME_ENABLE      131
-
 
 #define IDT_EXTRACT_EXTRACT_TO      3401
 #define IDT_EXTRACT_PATH_MODE       3410

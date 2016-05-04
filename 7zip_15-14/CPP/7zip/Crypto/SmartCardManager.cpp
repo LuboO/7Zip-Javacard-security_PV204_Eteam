@@ -9,13 +9,14 @@ const std::vector<BYTE> SmartCardManager::selectAppletCommand = {
 	0x6C, 0x65, 0x74
 };
 
-SmartCardManager SmartCardManager::getInstance(const SCARDCONTEXT & ctx/* , bool debugInfo*/) {
+const std::wstring SmartCardManager::CTR_SEPAR = L"#!";
+
+SmartCardManager SmartCardManager::getInstance(const SCARDCONTEXT & ctx) {
 	LONG rval = 0;
 	if ((rval = SCardIsValidContext(ctx)) != SCARD_S_SUCCESS)
 		throw CardException("Manager initialized with invalid context.");
 
 	SmartCardManager mngr(ctx);
-	//mngr.debugInfo = debugInfo;
 
 	return mngr;
 }
@@ -86,16 +87,6 @@ void SmartCardManager::pickReader(const UString & readerName) {
 			throw CardException("SCardConnect failed", rval);
 	}
 
-	/* Only for testing */
-	/*transmit({
-		0x80, 0xb8, 0x00, 0x00,
-		0x11, 0x0A, 0x37, 0x5A,
-		0x69, 0x70, 0x41, 0x70,
-		0x70, 0x6C, 0x65, 0x74,
-		0x05, 0x00, 0x00, 0x02,
-		0x0F, 0x0F
-	});*/
-
 	/* Selects 7Zip applet on the card */
 	if ((rval = getRetCode(transmit(selectAppletCommand))) != SW_NO_ERROR) {
 		if (rval == SW_INCORRECT_P1P2) {
@@ -126,12 +117,15 @@ UString SmartCardManager::getNewKey() const {
 			throw CardException("Card operation requires user authorization.");
 		throw CardException("Invalid card response", retCode);
 	}
+  /* Key must have 32B + 2B response */
+  if (derivedKey.size() != 34)
+    throw CardException("Data received from card have invalid length.");
 	/* Convert received binary key to Base64 (so it can be used as password). 
 	   Last two bytes are response bytes and ignored. */
 	return ConvertUtils::encodeBase64(&derivedKey[0], derivedKey.size() - 2);
 }
 
-UString SmartCardManager::getCardCounter() const {
+uint64_t SmartCardManager::getCardCounter() const {
 	auto getCounter = constructApdu(INS_RETRIEVE_CURRENT_CTR, {});
 	auto counter    = transmit(getCounter);
 	int  retCode    = 0;
@@ -140,36 +134,83 @@ UString SmartCardManager::getCardCounter() const {
 			throw CardException("Card operation requires user authorization.");
 		throw CardException("Invalid card response", retCode);
 	}
-	/* Return counter except for last two bytes */
-	//return std::vector<BYTE>(counter.begin(), counter.end() - 2);
-	return ConvertUtils::encodeBase64(&counter[0], counter.size() - 2);
+  /* Counter must have 8B + 2B response */
+  if (counter.size() != 10)
+    throw CardException("Data received from card have invalid length.");
+
+  /* Deleting response bytes */
+  counter.pop_back();counter.pop_back(); 
+  return ConvertUtils::bytesToUInt64(counter);
 }
 
-UString SmartCardManager::getCtrKey(const std::vector<BYTE>& counter) const {
-	auto getKeyIns  = constructApdu(INS_DERIVE_CTR_KEY, counter);
+UString SmartCardManager::getCtrKey(const uint64_t & counter) const {
+  auto ctr        = ConvertUtils::uInt64ToBytes(counter);
+	auto getKeyIns  = constructApdu(INS_DERIVE_CTR_KEY, ctr);
 	auto derivedKey = transmit(getKeyIns);
 	int  retCode    = 0;
 	if ((retCode = getRetCode(derivedKey)) != SW_NO_ERROR) {
-		if (retCode == SW_PIN_VERIFICATION_REQUIRED)
-			throw CardException("Card operation requires user authorization.");
+    if (retCode == SW_PIN_VERIFICATION_REQUIRED)
+      throw CardException("Card operation requires user authorization.");
+    else if (retCode == SW_DATA_INVALID)
+      throw CardException("Counter was not yet used for key generation.");
 		throw CardException("Invalid card response", retCode);
 	}
+  /* Key must have 32B + 2B response */
+  if(derivedKey.size() != 34)
+    throw CardException("Data received from card have invalid length.");
 	/* Convert binary key to Base64, last two bytes are response bytes and are not included */
 	return ConvertUtils::encodeBase64(&derivedKey[0], derivedKey.size() - 2);
+}
+
+void SmartCardManager::insertCounterToArcName(UString & arcName, const uint64_t & counter) {
+  std::wstring fname(arcName);
+  std::string ctr   = std::to_string(counter);
+  size_t lastSeparPos = fname.find_last_of(L"/\\");
+  size_t lastDotPos   = fname.find_last_of(L".");
+  UString toInsert;
+  toInsert += CTR_SEPAR.c_str();
+  toInsert.AddAscii(ctr.c_str());
+
+  size_t insertAt;
+  if (lastDotPos == std::string::npos)        insertAt = arcName.Len();
+  else if (lastSeparPos == std::string::npos) insertAt = lastDotPos;
+  else if (lastDotPos > lastSeparPos)         insertAt = lastDotPos;
+  else                                        insertAt = arcName.Len();
+
+  arcName.Insert(insertAt, toInsert);
+}
+
+uint64_t SmartCardManager::extractCounterFromArcName(const UString & arcName) {
+  std::wstring fname(arcName);
+  size_t ctrSeparPos = fname.rfind(CTR_SEPAR);
+  size_t lastDotPos  = fname.find_last_of(L".");
+  if (ctrSeparPos == std::string::npos)
+    throw CardException("Can't find counter in archive name.");
+
+  if (lastDotPos == std::string::npos)
+    lastDotPos = fname.length();
+  else if (lastDotPos <= ctrSeparPos)
+    lastDotPos = fname.length();
+  
+  ctrSeparPos += CTR_SEPAR.length();
+  fname = fname.substr(ctrSeparPos, lastDotPos - ctrSeparPos);
+
+  uint64_t counter;
+  try {
+    counter = std::stoull(fname);
+  }
+  catch (std::invalid_argument ex) {
+    throw CardException("Counter in filename can't be parsed.");
+  }
+  catch (std::out_of_range ex) {
+    throw CardException("Counter in filename is out of range of 64 bits.");
+  }
+  return counter;
 }
 
 std::vector<BYTE> SmartCardManager::transmit(const std::vector<BYTE>& bufferSend) const {
 	if (hCard == 0)
 		throw CardException("Card reader was not selected!");
-
-	/*if (debugInfo) {
-		std::cout << "Transmission start" << std::endl;
-		std::cout << ">>>>" << std::endl;
-		for (BYTE b : bufferSend)
-			std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)b << " ";
-
-		std::cout << std::endl << ">>>>" << std::endl;
-	}*/
 
 	/* Pick right protocol for communication */
 	const SCARD_IO_REQUEST * protocol;
@@ -199,23 +240,6 @@ std::vector<BYTE> SmartCardManager::transmit(const std::vector<BYTE>& bufferSend
 	if (rval != SCARD_S_SUCCESS)
 		throw CardException("SCardTransmmit", rval);
 
-	/* Check last two bytes of response */
-	/*if (bufferReceive[bufferReceiveSize - 2] != 0x90
-		|| bufferReceive[bufferReceiveSize - 1] != 00)
-		throw CardException(
-			"bad response",
-			bufferReceive[bufferReceiveSize - 2],
-			bufferReceive[bufferReceiveSize - 1]);*/
-
-	/*if (debugInfo) {
-		std::cout << "<<<<" << std::endl;
-		for (size_t i = 0; i < bufferReceiveSize; ++i)
-			std::cout << std::hex << std::setw(2) << std::setfill('0') << (int)bufferReceive[i] << " ";
-
-		std::cout << std::endl;
-		std::cout << "<<<<" << std::endl;
-		std::cout << "Transmission end" << std::endl;
-	}*/
 	bufferReceive.resize(bufferReceiveSize);
 	return bufferReceive;
 }

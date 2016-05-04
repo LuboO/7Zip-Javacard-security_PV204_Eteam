@@ -768,19 +768,7 @@ void CCompressDialog::OnOK()
 		  Info.Password = key;
 		  /* Embedding counter value in filename */
 		  /* Counter will be extracted in decompression */
-		  std::string fname = ConvertUtils::cvrtUniToStr(s);
-		  size_t lastSeparPos = fname.find_last_of("/\\");
-		  size_t lastDotPos   = fname.find_last_of(".");
-		  UString toInsert;
-		  toInsert.AddAscii("#!");
-		  toInsert += manager.getCardCounter();
-
-		  size_t insertAt;
-		  if (lastDotPos == std::string::npos)        insertAt = s.Len();
-		  else if (lastSeparPos == std::string::npos) insertAt = lastDotPos;
-		  else if (lastDotPos > lastSeparPos)         insertAt = lastDotPos;
-		  else                                        insertAt = s.Len();
-		  s.Insert(insertAt, toInsert);
+      SmartCardManager::insertCounterToArcName(s, manager.getCardCounter());
 	  }
 	  catch (CardException ex) {
 		  ShowErrorMessage(ConvertUtils::cvrtStrToUni(ex.what()));

@@ -30,15 +30,6 @@ public:
 		this->message = ss.str();
 	}
 
-	CardException(const std::string & message, BYTE sw1, BYTE sw2) 
-		: std::runtime_error(message) {
-		std::stringstream ss;
-		ss << message << ", response bytes 0x";
-		ss << std::hex << std::setw(2) << std::setfill('0') << (int)sw1;
-		ss << std::hex << std::setw(2) << std::setfill('0') << (int)sw2;
-		this->message = ss.str();
-	}
-
 	const char * what() {
 		return message.c_str();
 	}
@@ -56,10 +47,9 @@ public:
 	/**
 	 *@brief Returns SmartCardManager instance.
 	 *@param ctx Valid established smartcard context.
-	 *@param debugInfo If set to true, bytes will be printed on screen during transmission.
 	 *@return initialized instance
 	 */
-	static SmartCardManager getInstance(const SCARDCONTEXT & ctx/* , bool debugInfo*/);
+	static SmartCardManager getInstance(const SCARDCONTEXT & ctx);
 
 	/**
 	 *@brief Destructor, disconnects from card.
@@ -78,21 +68,57 @@ public:
 	 */
 	void pickReader(const UString & readerName);
 
+  /**
+   *@brief Logs in user to card.
+   *@userPassword user pin for card
+   */
 	void loginUser(const UString & userPassword) const;
 
+  /**
+   *@brief Requests new key from card. Available only after login. 
+   *       Counter is updated in card after this request.
+   *@return 256 bit key encoded in base64
+   */
 	UString getNewKey() const;
 
-	UString getCardCounter() const;
+  /**
+   *@brief Current counter on the card is requested.
+   *@return Counter encoded as 64 bit integer (counter on card has 8 bytes too)
+   */
+	uint64_t getCardCounter() const;
 
-	UString getCtrKey(const std::vector<BYTE> & counter) const;
+  /**
+   *@brief Requests key derivation with specific counter.
+   *@param counter Counter with which key should be derived
+   *@return Base64 encoded 256 bit key
+   */
+	UString getCtrKey(const uint64_t & counter) const;
+
+  /**
+   *@brief Inserts counter in uint64 and #! just before suffix in
+   *       archive name. If there is no suffix, counter is appended
+   *@param arcName archive name - will be modified
+   *@param counter counter in base64 encoding
+   */
+  static void insertCounterToArcName(UString & arcName, const uint64_t & counter);
+
+  /**
+   *@brief Extracts counter after #! from filename. 
+   *       Filename can contain suffix, it is ignored in extraction.
+   *       Exceptions are thrown on failed extraction or bad counter format.
+   *@param arcName archive name
+   *@return counter
+   */
+  static uint64_t extractCounterFromArcName(const UString & arcName);
 
 private:
 	const SCARDCONTEXT & context;
 	SCARDHANDLE hCard = 0;
 	DWORD cardProtocol;
-	//bool debugInfo = false;
 
 	static const int APDU_PACKET_MAX_SIZE = 256;
+  /* Characters used to separate filename and counter */
+  static const std::wstring CTR_SEPAR;
 
 	/* Following command will select correct 7Zip applet on the device.
 	   Should you use applet with different AID, change it here. */
@@ -110,6 +136,7 @@ private:
 	static const int SW_INCORRECT_P1P2 = 0x6A86;
 	static const int SW_VERIFICATION_FAILED = 0x6300;
 	static const int SW_PIN_VERIFICATION_REQUIRED = 0x6301;
+  static const int SW_DATA_INVALID = 0x6984;
 
 	SmartCardManager(const SCARDCONTEXT & ctx) : context(ctx) {}
 	/**
@@ -129,5 +156,9 @@ private:
 	std::vector<BYTE> constructApdu(BYTE instruction,
 		                            const std::vector<BYTE> & data) const;
 
+  /**
+   *@brief Converts last two bytes from response into integer.
+   *@param response Response from smartcard.
+   */
 	int getRetCode(const std::vector<BYTE> & response) const;
 };

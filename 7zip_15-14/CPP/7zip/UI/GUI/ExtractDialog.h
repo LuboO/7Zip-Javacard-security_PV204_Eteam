@@ -47,11 +47,8 @@ class CExtractDialog: public NWindows::NControl::CModalDialog
   NWindows::NControl::CComboBox _overwriteMode;
   #endif
 
-  // Added code
-  NWindows::NControl::CEdit _smartcardPinControl;
-
-  
   /////////////////// ADDED CODE
+  NWindows::NControl::CEdit _smartcardPinControl;
   bool IsUseSmartCardChecked() const { return IsButtonCheckedBool(IDX_USE_SMARTCARD_EX); }
   /////////////////// ADDED CODE
 
