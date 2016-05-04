@@ -14,6 +14,8 @@ class ConvertUtils {
 public:
 	static UString encodeBase64(unsigned char const * bytes , unsigned int len);
 
+	static std::vector<BYTE> ConvertUtils::decodeBase64(std::string const& encoded_string);
+
 	static UString cvrtStrToUni(const std::string & str);
 
 	static std::string cvrtUniToStr(const UString & str);

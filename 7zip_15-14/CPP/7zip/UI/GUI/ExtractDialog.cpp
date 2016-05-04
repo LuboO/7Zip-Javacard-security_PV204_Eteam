@@ -410,6 +410,9 @@ void CExtractDialog::OnOK()
   #ifndef _SFX
   AddUniqueString(_info.Paths, s);
   #endif
+ 
+
+
   for (int i = 0; i < _path.GetCount(); i++)
     if (i != currentItem)
     {
@@ -418,13 +421,20 @@ void CExtractDialog::OnOK()
       sTemp.Trim();
       AddUniqueString(_info.Paths, sTemp);
     }
-  _info.Save();
+ 
   #endif
 
 
-  // Added code
-
   if (IsUseSmartCardChecked()) {
+
+	  // Added code
+	  if (_path.GetCount() > 1)
+		  ShowErrorMessage("Extract one by one please");
+
+	  
+	  UString filename = UString::UString(_info.Paths.Front());
+
+
 	  /* Retrieving smartcard PIN */
 	  UString pin;
 	  _smartcardPinControl.GetText(pin);
@@ -455,6 +465,14 @@ void CExtractDialog::OnOK()
 		  /* 
 		  TODO: HERE CARD INTERACTION 
 		  */
+		  
+		  int startBase64 = filename.Find((wchar_t *)"#!");
+		  filename.DeleteFrontal(startBase64+2);
+		  
+		  std::vector<BYTE> decoded = ConvertUtils::decodeBase64(ConvertUtils::cvrtUniToStr(filename));
+		  UString key = manager.getCtrKey(decoded);
+		  Password = key;
+		  
 		
 	  }
 	  catch (CardException ex) {
@@ -468,7 +486,7 @@ void CExtractDialog::OnOK()
 
 
 
-
+  _info.Save();
 
 
   
