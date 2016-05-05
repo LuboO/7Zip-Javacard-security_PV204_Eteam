@@ -47,9 +47,10 @@ public class Applet7Zip extends javacard.framework.Applet {
     public final static short SW_VERIFICATION_FAILED       = 0x6300;
     public final static short SW_PIN_VERIFICATION_REQUIRED = 0x6301; 
     
-    public final static short SIZE_MASTER_KEY_BYTE = (short) 32;
-    public final static short SIZE_COUNTER_BYTE    = (short) 8; 
-    public final static short SIZE_RAM_ARRAY_BYTE  = (short) 256;
+    public final static short SIZE_MASTER_KEY_BYTE        = (short) 32;
+    public final static short SIZE_COUNTER_BYTE           = (short) 8; 
+    public final static short SIZE_RAM_ARRAY_BYTE         = (short) 256;
+    public final static short SIZE_HMAC_SHA256_BLOCK_BYTE = (short) 64;
     
     public final static byte PIN_USER_MAX_TRIES  = (byte) 0x03;
     public final static byte PIN_USER_MIN_LENGTH = (byte) 0x04;
@@ -313,17 +314,22 @@ public class Applet7Zip extends javacard.framework.Applet {
     }
     
     private void deriveKeyToRam(byte[] buffer, short ctrOff) {
+        /* Zero out working array */
+        Util.arrayFillNonAtomic(mRamArray, (short) 0, SIZE_RAM_ARRAY_BYTE, (byte) 0x00);
         /* Implements HMAC because cards alone can't handle it. */
         short keyOuterOff = 0;
-        short keyInnerOff = (short) (keyOuterOff + SIZE_MASTER_KEY_BYTE);
-        short counterOff  = (short) (keyInnerOff + SIZE_MASTER_KEY_BYTE);
+        short keyInnerOff = (short) (keyOuterOff + SIZE_HMAC_SHA256_BLOCK_BYTE);
+        short counterOff  = (short) (keyInnerOff + SIZE_HMAC_SHA256_BLOCK_BYTE);
         mMasterKey.getKey(mRamArray, keyInnerOff);
         mMasterKey.getKey(mRamArray, keyOuterOff);
-        arrayXorByte(mRamArray , keyOuterOff , OPAD_BYTE , SIZE_MASTER_KEY_BYTE);
-        arrayXorByte(mRamArray , keyInnerOff , IPAD_BYTE , SIZE_MASTER_KEY_BYTE);
+        arrayXorByte(mRamArray , keyOuterOff , OPAD_BYTE , SIZE_HMAC_SHA256_BLOCK_BYTE);
+        arrayXorByte(mRamArray , keyInnerOff , IPAD_BYTE , SIZE_HMAC_SHA256_BLOCK_BYTE);
         Util.arrayCopyNonAtomic(buffer , ctrOff , mRamArray , counterOff , SIZE_COUNTER_BYTE);
-        mHashEngine.doFinal(mRamArray, keyInnerOff, (short)(SIZE_MASTER_KEY_BYTE + SIZE_COUNTER_BYTE), mRamArray, keyInnerOff);
-        mHashEngine.doFinal(mRamArray, keyOuterOff, (short)(SIZE_MASTER_KEY_BYTE * 2), mRamArray, keyOuterOff);
+        mHashEngine.doFinal(mRamArray, keyInnerOff, (short)(SIZE_HMAC_SHA256_BLOCK_BYTE + SIZE_COUNTER_BYTE), 
+                            mRamArray, keyInnerOff);
+        mHashEngine.doFinal(mRamArray, keyOuterOff, (short)(SIZE_HMAC_SHA256_BLOCK_BYTE + SIZE_MASTER_KEY_BYTE), 
+                            mRamArray, keyOuterOff);
+        /* Derived key is now happily in ram on offset 0 */
     }
     
     private void arrayXorByte(byte[] arr , short off , byte toXor , short len) {
