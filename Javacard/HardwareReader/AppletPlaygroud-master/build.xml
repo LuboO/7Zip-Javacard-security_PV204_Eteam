@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project basedir="." default="toys" name="AppletPlayground build">
+  <!-- Applet building dependencies -->
+  <property name="JC222" value="ext/java_card_kit-2_2_2"/>
+  <property name="JC303" value="ext/java_card_kit-3_0_3"/>
+  <property name="OP20" value="ext/visa_openplatform-2_0"/>
+  <property name="GP211" value="ext/globalplatform-2_1_1"/>
+  
+  <!-- ant-javacard task from javacard.pro -->
+  <taskdef name="javacard" classname="pro.javacard.ant.JavaCard" classpath="ext/ant-javacard.jar"/>
+  <!-- All included applets -->
+  <target name="simpleapplet">
+    <javacard jckit="${JC222}">
+      <cap output="simpleapplet.cap" sources="src/SimpleApplet">
+        <applet class="applets.SimpleApplet" aid="4C6162616B4170706C6574"/>
+      </cap>
+    </javacard>
+  </target>
+  <target name="applet7zip">
+    <javacard jckit="${JC222}">
+      <cap output="applet7zip.cap" sources="src/Applet7Zip">
+        <applet class="applet.Applet7Zip" aid="375A69704170706C6574"/>
+      </cap>
+    </javacard>
+  </target>    
+  <target name="toys">
+    <javacard jckit="${JC222}">
+      <!-- MuscleApplet -->
+      <cap output="MuscleApplet.cap" sources="src/com/musclecard">
+        <applet class="com.musclecard.CardEdge.CardEdge" aid="A00000000102"/>
+      </cap>
+      <!-- CoolKeyApplet -->
+      <cap output="CoolKeyApplet.cap" aid="627601FF0000" sources="src/com/redhat">
+        <applet class="com.redhat.ckey.applet.CardEdge" aid="627601FF000001"/>
+        <import exps="${OP20}" jar="${OP20}/visaop20.jar"/>
+      </cap>
+      <!-- OpenPGPApplet -->
+      <cap output="OpenPGPApplet.cap" sources="src/openpgpcard" aid="D27600012401">
+        <applet class="openpgpcard.OpenPGPApplet" aid="D2760001240102000000000000010000"/>
+      </cap>
+      <!-- Another PGP applet -->
+      <cap output="FluffyPGPApplet.cap" sources="src/net/ss3t" aid="D27600012401">
+        <applet class="net.ss3t.javacard.gpg.Gpg" aid="D2760001240102000000000000000000"/>
+      </cap>
+      <!-- PKIApplet -->
+      <cap output="PKIApplet.cap" sources="src/net/sourceforge/javacardsign" aid="A000000063">
+        <applet class="net.sourceforge.javacardsign.applet.PKIApplet" aid="A000000063504B43532D3135"/>
+        <import exps="${GP211}" jar="${GP211}/gp211.jar"/>
+      </cap>
+      <!-- OATH from Yubikey -->
+      <cap output="OATH.cap" aid="A0000005272101" sources="src/pkgYkneoOath">
+        <applet class="pkgYkneoOath.YkneoOath" aid="A000000527210101"/>
+      </cap>
+      <!-- PassportApplet from JMRTD -->
+      <cap output="PassportApplet.cap" sources="src/sos" aid="A00000024710">
+        <applet class="sos.passportapplet.PassportApplet" aid="A0000002471001"/>
+      </cap>
+      <!-- OpenEMV-->
+      <cap output="OpenEMV.cap" sources="src/openemv">
+        <applet class="openemv.SimpleEMVApplet" aid="315041592E5359532E4444463031"/>
+      </cap>
+      <!-- NDEF applet -->
+      <cap output="NDEF.cap" sources="src/de/spline">
+        <applet class="de.spline.uves.ndef.Ndef" aid="d27600008501"/>
+      </cap>
+      <!-- BTChip Applet -->
+      <cap jckit="${JC303}" output="BTChip.cap" sources="src/com/btchip" aid="FF425443484950">
+        <applet class="com.btchip.applet.poc.BTChipPocApplet" aid="FF42544348495001"/>
+        <applet class="com.btchip.applet.poc.BTChipNFCForumApplet" aid="FF42544348495002"/>
+      </cap>
+      <!-- PLAID -->
+      <cap output="PLAID.cap" sources="src/plaid804" aid="a000000464006166676d">
+        <applet class="plaid804.PLAID804" aid="A000000464"/>
+      </cap>
+      <!-- Belgian eID -->
+      <cap output="BeID.cap" sources="src/be/fedict" aid="A000000177504B43532D31">
+        <applet class="be.fedict.eidapplet.EidCard" aid="A000000177504B43532D3135"/>
+        <import exps="${GP211}" jar="${GP211}/gp211.jar"/>
+      </cap>
+      <!-- ISOApplet -->
+      <cap jckit="${JC303}" output="ISOApplet.cap" sources="src/net/pwendland" aid="f276a288bcfba69d34f310">
+        <applet class="net.pwendland.javacard.pki.isoapplet.IsoApplet" aid="f276a288bcfba69d34f31001"/>
+      </cap>
+      <!-- ISO18013 Driving License -->
+      <cap output="DriversLicense.cap" sources="src/org/isodl" aid="a00000024802">
+        <applet class="org.isodl.applet.LicenseApplet" aid="a0000002480200"/>
+      </cap>
+      <cap output="AlgTest.cap" sources="src/AlgTest" aid="6D797061636B616731">
+        <applet class="AlgTest.AlgTest" aid="6D7970616330303031"/>
+      </cap>
+      <cap output="readertest.cap" sources="src/org/debian" aid="A0:00:00:00:18:FF">
+        <applet class="org.debian.alioth.pcsclite.readertest.readertest" aid="A0:00:00:00:18:FF:01"/>
+      </cap>
+    </javacard>
+  </target>
+</project>

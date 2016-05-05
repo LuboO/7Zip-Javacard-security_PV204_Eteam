@@ -1,0 +1,6 @@
+/applet-playground-caps.jar
+/applet-playground.jar
+/*.cap
+/tmp
+/bin
+*~
