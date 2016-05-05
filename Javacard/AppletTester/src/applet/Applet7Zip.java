@@ -1,7 +1,6 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * PACKAGEID: 37 5A 69 70 41
+ * APPLETID: 37 5A 69 70 41 70 70 6C 65 74
  */
 package applet;
 
@@ -49,7 +48,6 @@ public class Applet7Zip extends javacard.framework.Applet {
     public final static short SW_PIN_VERIFICATION_REQUIRED = 0x6301; 
     
     public final static short SIZE_MASTER_KEY_BYTE = (short) 32;
-    public final static short SIZE_MASTER_KEY_BIT  = (short) (SIZE_MASTER_KEY_BYTE * 8);
     public final static short SIZE_COUNTER_BYTE    = (short) 8; 
     public final static short SIZE_RAM_ARRAY_BYTE  = (short) 256;
     
@@ -60,11 +58,14 @@ public class Applet7Zip extends javacard.framework.Applet {
     public final static byte PIN_ADMIN_MAX_TRIES = (byte) 0x7F;
     public final static byte PIN_ADMIN_LENGTH    = (byte) 0x10;
     
-    private OwnerPIN   mUserPin   = null;
-    private OwnerPIN   mAdminPin  = null;
-    private RandomData mRandGen   = null;
-    private Signature  mHmacSign  = null;
-    private HMACKey    mMasterKey = null;
+    private final static byte OPAD_BYTE = (byte) 0x5c;
+    private final static byte IPAD_BYTE = (byte) 0x36;
+    
+    private OwnerPIN      mUserPin    = null;
+    private OwnerPIN      mAdminPin   = null;
+    private RandomData    mRandGen    = null;
+    private MessageDigest mHashEngine = null;
+    private AESKey        mMasterKey  = null;
     
     /* Fast RAM memory for various operations */
     private byte mRamArray[] = null;
@@ -101,17 +102,16 @@ public class Applet7Zip extends javacard.framework.Applet {
         
         /* Initialize random generator */
         mRandGen = RandomData.getInstance(RandomData.ALG_SECURE_RANDOM);
-
-        /* Initialize and set master key to random data */
-        mMasterKey = (HMACKey) KeyBuilder.buildKey(KeyBuilder.TYPE_HMAC , SIZE_MASTER_KEY_BIT, false);
+        /* Generate rnd data */
         mRandGen.generateData(mRamArray, (short) 0, SIZE_MASTER_KEY_BYTE);
-        mMasterKey.setKey(mRamArray, (short) 0, SIZE_MASTER_KEY_BYTE);
+        /* Initialize and set master key to random data */
+        mMasterKey = (AESKey) KeyBuilder.buildKey(KeyBuilder.TYPE_AES, KeyBuilder.LENGTH_AES_256, false);
+        mMasterKey.setKey(mRamArray , (short) 0);
         /* Zero out the array again */
         Util.arrayFillNonAtomic(mRamArray, (short) 0, SIZE_MASTER_KEY_BYTE, (byte) 0x00);
-
-        /* Initialize HMAC signature object */
-        mHmacSign = Signature.getInstance(Signature.ALG_HMAC_SHA_256, false);
-        mHmacSign.init(mMasterKey, Signature.MODE_SIGN);
+        
+        /* Initialize hashing engine */
+        mHashEngine = MessageDigest.getInitializedMessageDigestInstance(MessageDigest.ALG_SHA_256, false);
         
         register();
     }
@@ -149,6 +149,14 @@ public class Applet7Zip extends javacard.framework.Applet {
         } else {
             ISOException.throwIt(ISO7816.SW_CLA_NOT_SUPPORTED);
         }
+    }
+    
+    public boolean select() {
+        return true;
+    }
+    
+    public void deselect() {
+        Util.arrayFillNonAtomic(mRamArray, (short) 0, SIZE_RAM_ARRAY_BYTE, (byte) 0x00);
     }
     
     private void loginUser(APDU apdu) {
@@ -209,11 +217,9 @@ public class Applet7Zip extends javacard.framework.Applet {
         JCSystem.beginTransaction();
         /* Generate new data and set its value to key */
         mRandGen.generateData(mRamArray, (short) 0, SIZE_MASTER_KEY_BYTE);
-        mMasterKey.setKey(mRamArray, (short) 0, SIZE_MASTER_KEY_BYTE);
+        mMasterKey.setKey(mRamArray, (short) 0);
         /* Zero out array again */
         Util.arrayFillNonAtomic(mRamArray, (short) 0, SIZE_MASTER_KEY_BYTE, (byte) 0x00);
-        /* Initialize HMAC Signature with new key */
-        mHmacSign.init(mMasterKey, Signature.MODE_SIGN);
         /* Set counter to zero */
         Util.arrayFillNonAtomic(mCounter, (short) 0 , SIZE_COUNTER_BYTE, (byte) 0x00);
         JCSystem.commitTransaction();
@@ -232,9 +238,7 @@ public class Applet7Zip extends javacard.framework.Applet {
     }
     
     private void deriveNewKey(APDU apdu) {
-        byte[]  buffer = apdu.getBuffer();
         apdu.setIncomingAndReceive();
-        short   sigLen;
         
         if(false == mUserPin.isValidated())
             ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
@@ -242,15 +246,16 @@ public class Applet7Zip extends javacard.framework.Applet {
         /* Increments counter, derives new key and sends it back */
         JCSystem.beginTransaction();
         incCounterNonAtomic();
-        sigLen = mHmacSign.sign(mCounter, (short) 0, SIZE_COUNTER_BYTE, buffer,ISO7816.OFFSET_CDATA);
+        deriveKeyToRam(mCounter , (short) 0);
         JCSystem.commitTransaction();
-        apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, sigLen);
+        apdu.setOutgoing();
+        apdu.setOutgoingLength(SIZE_MASTER_KEY_BYTE);
+        apdu.sendBytesLong(mRamArray, (short) 0, SIZE_MASTER_KEY_BYTE);
     }
     
     private void deriveCtrKey(APDU apdu) {
         byte[]  buffer = apdu.getBuffer();
         short   bufLen = apdu.setIncomingAndReceive();
-        short   sigLen;
         
         if(false == mUserPin.isValidated())
             ISOException.throwIt(SW_PIN_VERIFICATION_REQUIRED);
@@ -260,16 +265,17 @@ public class Applet7Zip extends javacard.framework.Applet {
         
         /* Derives key from counter and master key, sends it back */
         JCSystem.beginTransaction();
-        sigLen = mHmacSign.sign(buffer, (short) ISO7816.OFFSET_CDATA, bufLen, 
-                                buffer, (short) ISO7816.OFFSET_CDATA);
+        deriveKeyToRam(buffer, (short) ISO7816.OFFSET_CDATA);
         JCSystem.commitTransaction();
-        apdu.setOutgoingAndSend(ISO7816.OFFSET_CDATA, sigLen);
+        apdu.setOutgoing();
+        apdu.setOutgoingLength(SIZE_MASTER_KEY_BYTE);
+        apdu.sendBytesLong(mRamArray, (short) 0, SIZE_MASTER_KEY_BYTE);
     }
     
     private void incCounterNonAtomic() {
         for(short i = SIZE_COUNTER_BYTE - 1; i >= 0; --i) {
             ++mCounter[i];
-            if(mCounter[i] != 0)
+            if(mCounter[i] != (short) 0)
                 break;
         }
     }
@@ -293,9 +299,9 @@ public class Applet7Zip extends javacard.framework.Applet {
         short mCounterByte;
         short bufferByte;
         
-        for(short i = 0 ; i < SIZE_COUNTER_BYTE ; ++i) {
+        for(short i = (short) 0 ; i < SIZE_COUNTER_BYTE ; ++i) {
             mCounterByte = (short) (mCounter[i] & 0xFF);
-            bufferByte = (short) (buffer[ctrOffset + i] & 0xFF);
+            bufferByte = (short) (buffer[(short)(ctrOffset + i)] & 0xFF);
             
             if(bufferByte > mCounterByte) {
                 return false;
@@ -304,5 +310,27 @@ public class Applet7Zip extends javacard.framework.Applet {
             }
         }
         return true;
+    }
+    
+    private void deriveKeyToRam(byte[] buffer, short ctrOff) {
+        /* Implements HMAC because cards alone can't handle it. */
+        short keyOuterOff = 0;
+        short keyInnerOff = (short) (keyOuterOff + SIZE_MASTER_KEY_BYTE);
+        short counterOff  = (short) (keyInnerOff + SIZE_MASTER_KEY_BYTE);
+        mMasterKey.getKey(mRamArray, keyInnerOff);
+        mMasterKey.getKey(mRamArray, keyOuterOff);
+        arrayXorByte(mRamArray , keyOuterOff , OPAD_BYTE , SIZE_MASTER_KEY_BYTE);
+        arrayXorByte(mRamArray , keyInnerOff , IPAD_BYTE , SIZE_MASTER_KEY_BYTE);
+        Util.arrayCopyNonAtomic(buffer , ctrOff , mRamArray , counterOff , SIZE_COUNTER_BYTE);
+        mHashEngine.doFinal(mRamArray, keyInnerOff, (short)(SIZE_MASTER_KEY_BYTE + SIZE_COUNTER_BYTE), mRamArray, keyInnerOff);
+        mHashEngine.doFinal(mRamArray, keyOuterOff, (short)(SIZE_MASTER_KEY_BYTE * 2), mRamArray, keyOuterOff);
+    }
+    
+    private void arrayXorByte(byte[] arr , short off , byte toXor , short len) {
+        short i = 0;
+        while(i < len) {
+            arr[(short)(off + i)] = (byte) (arr[(short)(off + i)] ^ toXor);
+            ++i;
+        }
     }
 }

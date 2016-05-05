@@ -87,6 +87,19 @@ void SmartCardManager::pickReader(const UString & readerName) {
 			throw CardException("SCardConnect failed", rval);
 	}
 
+  /* Only for testing */
+  /*rval = getRetCode(transmit({
+  0x80, 0xb8, 0x00, 0x00,
+  0x11, 0x0A, 0x37, 0x5A,
+  0x69, 0x70, 0x41, 0x70,
+  0x70, 0x6C, 0x65, 0x74,
+  0x05, 0x00, 0x00, 0x02,
+  0x0F, 0x0F
+  }));
+
+  if (rval != SW_NO_ERROR)
+    throw CardException("wtf", rval);*/
+
 	/* Selects 7Zip applet on the card */
 	if ((rval = getRetCode(transmit(selectAppletCommand))) != SW_NO_ERROR) {
 		if (rval == SW_INCORRECT_P1P2) {

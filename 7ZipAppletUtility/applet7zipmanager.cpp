@@ -175,6 +175,8 @@ std::vector<BYTE> Applet7ZipManager::transmit(const std::vector<BYTE>& bufferSen
 			bufferReceive[bufferReceiveSize - 2],
 			bufferReceive[bufferReceiveSize - 1]);
 
+  bufferReceive.resize(bufferReceiveSize);
+
 	if (debugInfo) {
 		std::cout << "<<<<" << std::endl;
 		for (size_t i = 0; i < bufferReceiveSize; ++i)
@@ -184,7 +186,7 @@ std::vector<BYTE> Applet7ZipManager::transmit(const std::vector<BYTE>& bufferSen
 		std::cout << "<<<<" << std::endl;
 		std::cout << "Transmission end" << std::endl;
 	}
-
+  
 	return bufferReceive;
 }
 
