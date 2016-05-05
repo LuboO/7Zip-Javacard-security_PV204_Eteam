@@ -132,11 +132,12 @@ private:
 	static const BYTE INS_DERIVE_CTR_KEY = 0x77;
 
 	/* Return codes used by card */
-	static const int SW_NO_ERROR = 0x9000;
-	static const int SW_INCORRECT_P1P2 = 0x6A86;
-	static const int SW_VERIFICATION_FAILED = 0x6300;
+	static const int SW_NO_ERROR                  = 0x9000;
+	static const int SW_INCORRECT_P1P2            = 0x6A86;
+	static const int SW_VERIFICATION_FAILED       = 0x6300;
 	static const int SW_PIN_VERIFICATION_REQUIRED = 0x6301;
-  static const int SW_DATA_INVALID = 0x6984;
+  static const int SW_DATA_INVALID              = 0x6984;
+  static const int SW_FILE_NOT_FOUND            = 0x6a82;
 
 	SmartCardManager(const SCARDCONTEXT & ctx) : context(ctx) {}
 	/**

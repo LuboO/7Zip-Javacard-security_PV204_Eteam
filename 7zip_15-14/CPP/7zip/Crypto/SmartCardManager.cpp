@@ -102,12 +102,9 @@ void SmartCardManager::pickReader(const UString & readerName) {
 
 	/* Selects 7Zip applet on the card */
 	if ((rval = getRetCode(transmit(selectAppletCommand))) != SW_NO_ERROR) {
-		if (rval == SW_INCORRECT_P1P2) {
+		if (rval == SW_FILE_NOT_FOUND)
 			throw CardException("Applet isn't installed or can't be selected on device.");
-		}
-		else {
-			throw CardException("Invalid card response", rval);
-		}
+		throw CardException("Invalid card response", rval);
 	}
 }
 
