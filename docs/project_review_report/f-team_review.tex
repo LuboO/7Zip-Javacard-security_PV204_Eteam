@@ -1,0 +1,55 @@
+\documentclass[letterpaper]{article}
+
+\usepackage[english]{babel}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[colorinlistoftodos]{todonotes}
+\usepackage[margin=0.8in]{geometry}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{qtree}
+\pagestyle{fancy}
+\rhead{E Team}
+
+\title{Encrypted Notepad project review}
+\author{Lubo Obratil, Agusti Bau Pericon, Aobakwe Alloycius Mmokwa}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{General project overview}
+\begin{itemize}
+\item Java application for reliable text file encryption.
+\item Application is modified so that encryption password is extracted from the card.
+\item Communication between card and application is secured with RSA encryption. Protocol is secure against eavesdropping, but can be broken with man-in-the-middle attack. Authors noted this in project specification.
+\item Encryption key is randomly generated on the card, can not be reset - applet must be reinstalled in order to do that.
+\item User PIN code length is set to 4 characters and can be incorrectly entered 4 times (5 times total). Applet must be then reinstalled and encryption key is lost.
+\end{itemize}
+
+\section{Possible design enhancements}
+\begin{itemize}
+\item For communication encryption, 1024 bit long RSA is used. Generally it is recommended to use longer keys for new applications since 1024 bit keys will be probably broken in upcoming years.
+\item For every file, same key from card is used. During encryption/decryption key is stored in user machine's memory. Should attacker gain access to this memory only once, he then can decrypt every file previously encrypted with this key. This could be mitigated for example with key derivation on the card. However two equal plaintexts won't be transformed into two equal ciphertexts due to application's correct use of initialization vectors.
+\item User could be able to reset the encryption key on the card in case his old key is compromised without the need to reinstall the applet.
+\end{itemize}
+
+\section{Code/style problems}
+\begin{itemize}
+\item In both applet and application, PIN, key and RSA sizes are hardcoded on multiple different places. This should be done through constants in case someone would want to change some of these values.
+\item Smartcard security could be implemented as a optional feature - at this moment application won't start without a card present in system.
+\end{itemize}
+
+\section{Bugs/problems}
+\begin{itemize}
+\item Applet always expects PIN of length 4. Having PIN code set at 1111 and changing it to single 0 results in PIN being 0111 - remaining bytes are read from ram array which contains PIN from previous verification. After card reconnection (nulling the ram memory), only 0111 will be accepted as PIN, 0 alone no.
+\item Alternatively, PIN set to e.g. 123456 results in PIN being 1234.
+\item After starting application and removing card from machine, application continues to run without error. Attempts to encrypt file (required card connection) result in uncaught exceptions from smartcardio.
+\end{itemize}
+
+\end{document}
+
+
