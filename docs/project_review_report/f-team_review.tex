@@ -48,7 +48,30 @@
 \item Applet always expects PIN of length 4. Having PIN code set at 1111 and changing it to single 0 results in PIN being 0111 - remaining bytes are read from ram array which contains PIN from previous verification. After card reconnection (nulling the ram memory), only 0111 will be accepted as PIN, 0 alone no.
 \item Alternatively, PIN set to e.g. 123456 results in PIN being 1234.
 \item After starting application and removing card from machine, application continues to run without error. Attempts to encrypt file (required card connection) result in uncaught exceptions from smartcardio.
+\item Bad response code handling - application always check correct status returned (0x9000), but if something else happens, wrong message or no message is written - failure of RSA decryption on card side yields no error whatsoever.
 \end{itemize}
+
+\section{Attacks}
+\subsection{Attacker PIN change after user PIN change}
+Problem with PIN of assumed size 4. When user changes PIN, new PIN is stored in RAM memory. This memory is erased on applet deselect. But if Encrypted Notepad application is not terminated after PIN change, PIN is in RAM at offset 0-3. Then attacker can attempt to change PIN again but he just needs to guess the first digit of the PIN correctly. He has 5 tries for that. The one digit PIN supplied by attacker is stored into RAM at position 0. Then validity of supplied PIN is checked against PIN that is in RAM on positions 0-3. Therefore positions 1-3 contain PIN from previous change and if the first digit was correct, attacker's PIN is successfully validated. This should also work without guessing the first PIN character, but JavaCard returns error if message contains no plaintext (0x6F00 response code).
+
+\subsubsection*{Prerequisites of attack}
+\begin{itemize}
+\item User must change his PIN and leave application open on the computer.
+\item Attacker must have access to target machine with inserted card and application running.
+\item Attacker must guess first character of user PIN in 5 tries.
+\end{itemize}
+
+\subsubsection*{Steps of attack}
+\begin{enumerate}
+\item Access the machine with satisfied prerequisites.
+\item Go to change PIN menu.
+\item Guess probable first character of the PIN.
+\item Try to change PIN to some arbitrary value.
+\item Go to step 3. on failure or continue on success or card blockage.
+\item Celebrate success or throw out blocked card.
+\end{enumerate}
+ 
 
 \end{document}
 
